@@ -529,8 +529,7 @@ function homeHTML() {
   let main;
   if (!state.loaded) main = `<p class="empty">${t('Cargando las tapas de hoy…')}</p>`;
   else if (!today.length) {
-    main = `<div class="ride-hero"><strong class="big-line">${t('Aún no hay tapas hoy')}</strong><small>${t('¿Estás de viños? Hazle una foto a la tapa que te pongan y sé el primero del día.')}</small></div>
-      <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
+    main = `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
   } else {
     main = `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}
       <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;

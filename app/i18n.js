@@ -33,8 +33,6 @@ export const GL = {
   "Filtrar tapas": "Filtrar tapas",
   "Todas": "Todas",
   "Cargando las tapas de hoy…": "Cargando as tapas de hoxe…",
-  "Aún no hay tapas hoy": "Aínda non hai tapas hoxe",
-  "¿Estás de viños? Hazle una foto a la tapa que te pongan y sé el primero del día.": "Estás de viños? Fai unha foto á tapa que che poñan e sé o primeiro do día.",
   "Subir una tapa": "Subir unha tapa",
   "Hoy no hay tapas de este tipo todavía.": "Hoxe aínda non hai tapas deste tipo.",
   "Cerca de ti": "Preto de ti",
