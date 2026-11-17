@@ -1,8 +1,11 @@
-// Que Tapa!: el modo de ejemplo (/?ejemplo). Bares y tapas INVENTADOS para ver cómo queda la web
-// llena, por ejemplo para enseñársela a un bar. Los nombres son ficticios a propósito y las «fotos»
-// son dibujos: nada de esto se envía al servidor y la web lo avisa arriba.
+// Que Tapa!: el modo de ejemplo (/?ejemplo), para enseñar la web llena antes de que los bares
+// suban nada. Usa bares de Lugo con tapas que se conocen por artículos publicados (Guía Repsol,
+// Planomato), pero las «fotos» son dibujos y las notas y las horas, inventadas. La web lo avisa
+// arriba y las tapas llevan la marca «Ejemplo»: nada de esto lo ha subido ningún bar.
+//
+// Si el servidor tiene los bares de OpenStreetMap, cada uno sale en su sitio exacto; si no,
+// en una posición aproximada.
 
-// Fondos suaves, como de mesa clara: la foto real será la que dé el color.
 const FONDOS = ['#F3E6D8', '#E8EEF0', '#F1E4E1', '#E9EFE3', '#F4EBD6', '#ECE7F1'];
 
 /** Un dibujo sencillo de la tapa en su plato. */
@@ -18,40 +21,65 @@ function dibujo(emoji, fondo, square = false) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+// Bares con tapas conocidas. `busca` encuentra el bar en OpenStreetMap; `lat`/`lon` son la posición
+// aproximada por si no aparece.
+const BARES = [
+  { id: 'daniel', nombre: 'Taberna Daniel', dir: 'Zona de viños', busca: /\b(taberna )?daniel\b/, lat: 43.00975, lon: -7.55855 },
+  { id: 'cinco-vigas', nombre: 'Las Cinco Vigas', dir: 'Rúa da Cruz', busca: /\b(cinco|5) vigas\b/, lat: 43.0096, lon: -7.5588 },
+  { id: 'catro-ruas', nombre: '4 Rúas', dir: 'A Milagrosa', busca: /\b(4|catro|cuatro) ruas\b/, lat: 43.0185, lon: -7.547 },
+  { id: 'la-nuez', nombre: 'La Nuez', dir: 'Rúa do Camiño Real, 117', busca: /\bnuez\b/, lat: 43.0172, lon: -7.5452 },
+  { id: 'lagar', nombre: 'Cervecería Lagar', dir: 'Rúa da Milagrosa, 38', busca: /\blagar\b/, lat: 43.018, lon: -7.5463 },
+  { id: 'a-adega', nombre: 'A Adega', dir: 'Praza do Campo, 4', busca: /^(a )?adega$/, lat: 43.0103, lon: -7.55775 },
+  { id: 'paprica', nombre: 'Paprica', dir: 'Lugo', busca: /\bpaprica\b/, lat: 43.01155, lon: -7.559 },
+];
+
+// [bar, tapa, tipos, dibujo, número de notas, media, hace cuántos minutos, días atrás]
+const TAPAS = [
+  ['daniel', 'Huevo frito', ['huevo'], '🍳', 31, 4.7, 35, 0],
+  ['cinco-vigas', 'Chorizo a la sidra', ['carne'], '🥘', 23, 4.5, 70, 0],
+  ['catro-ruas', 'Pulpo á feira', ['mar', 'sin-gluten'], '🐙', 18, 4.8, 125, 0],
+  ['la-nuez', 'Raxo', ['carne'], '🥩', 15, 4.4, 20, 0],
+  ['lagar', 'Costilla', ['carne'], '🍖', 12, 4.6, 160, 0],
+  ['a-adega', 'Caldo gallego', ['cuchara'], '🍲', 9, 4.2, 200, 0],
+  ['paprica', 'Berenjena escalibada con queso de cabra', ['veggie'], '🍆', 6, 4.9, 50, 0],
+  ['catro-ruas', 'Churrasco', ['carne'], '🍖', 4, 4.0, 15, 0],
+  ['daniel', 'Cocodrilo: filete con patatas', ['carne'], '🍟', 19, 4.3, 1500, 1],
+  ['la-nuez', 'Tortilla rellena', ['huevo'], '🥚', 14, 4.6, 1600, 1],
+  ['cinco-vigas', 'Lengua en salsa', ['carne'], '🥘', 8, 4.1, 3000, 2],
+];
+
 const madridDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
 
-export function demoData() {
+/** Los datos de ejemplo. `reales` son los bares que manda el servidor (pueden no venir). */
+export function demoData(reales = []) {
   const now = Date.now();
   const fecha = madridDay(now - 5 * 3600000);
   const dayBefore = (n) => madridDay(now - 5 * 3600000 - n * 86400000);
-  const bares = [
-    { id: 'demo-1', nombre: 'Taberna do Exemplo', lat: 43.01215, lon: -7.55705, dir: 'Rúa Nova (ejemplo)', reg: true, insta: '' },
-    { id: 'demo-2', nombre: 'Bar A Proba', lat: 43.01025, lon: -7.5579, dir: 'Praza do Campo (ejemplo)', reg: true },
-    { id: 'demo-3', nombre: 'Mesón da Mostra', lat: 43.00985, lon: -7.5586, dir: 'Rúa da Cruz (ejemplo)', reg: false },
-    { id: 'demo-4', nombre: 'O Ensaio', lat: 43.00935, lon: -7.5561, dir: 'Praza Maior (ejemplo)', reg: false },
-    { id: 'demo-5', nombre: 'Vinoteca Boceto', lat: 43.0128, lon: -7.5552, dir: 'Santo Domingo (ejemplo)', reg: true },
-    { id: 'demo-6', nombre: 'A Barra de Proba', lat: 43.0185, lon: -7.5452, dir: 'A Milagrosa (ejemplo)', reg: true },
-    { id: 'demo-7', nombre: 'Café Simulacro', lat: 43.0224, lon: -7.5505, dir: 'Aceña de Olga (ejemplo)', reg: false },
-    { id: 'demo-8', nombre: 'Bar Maqueta', lat: 43.0115, lon: -7.5594, dir: 'Praza de Santa María (ejemplo)', reg: false },
-    { id: 'demo-9', nombre: 'Tasca Ficticia', lat: 43.0136, lon: -7.5603, dir: 'Ronda da Muralla (ejemplo)', reg: false },
-    { id: 'demo-10', nombre: 'Cervecería Inventada', lat: 43.0078, lon: -7.5552, dir: 'Avenida de ejemplo', reg: false },
-  ];
-  const min = (m) => new Date(now - m * 60000).toISOString();
-  const raw = [
-    ['demo-1', 'Raxo con patatas', ['carne'], '🥩', 23, 40, 'bar', 'Hasta las 15:30', fecha],
-    ['demo-2', 'Callos de la casa', ['cuchara'], '🥘', 31, 70, 'bar', '', fecha],
-    ['demo-3', 'Pulpo á feira', ['mar', 'sin-gluten'], '🐙', 18, 130, 'cliente', '', fecha],
-    ['demo-4', 'Tortilla jugosa', ['huevo', 'veggie'], '🍳', 12, 190, 'cliente', '', fecha],
-    ['demo-6', 'Zorza con pan', ['carne'], '🍖', 9, 25, 'bar', 'Solo con vino', fecha],
-    ['demo-5', 'Croquetas de lacón', ['carne'], '🧆', 6, 300, 'bar', '', fecha],
-    ['demo-8', 'Pimientos de Padrón', ['veggie', 'sin-gluten'], '🫑', 4, 10, 'cliente', '', fecha],
-    ['demo-7', 'Empanada de xoubas', ['mar'], '🥧', 2, 240, 'cliente', '', fecha],
-    ['demo-1', 'Oreja a la plancha', ['carne'], '🥓', 15, 1500, 'bar', '', dayBefore(1)],
-    ['demo-2', 'Lentejas con chorizo', ['cuchara'], '🍲', 11, 2900, 'bar', '', dayBefore(2)],
-  ];
-  const tapas = raw.map(([bar, nombre, tipos, emoji, fuegos, ago, autor, nota, dia], i) => ({
-    id: `demo-t${i + 1}`, bar, fecha: dia, at: min(ago), nombre, tipos, nota, autor, fuegos,
-    img: dibujo(emoji, i), mini: dibujo(emoji, i, true),
+  const usados = new Set();
+  const idDe = new Map();
+  const bares = BARES.map((b) => {
+    const real = reales.find((r) => !usados.has(r.id) && b.busca.test(norm(r.nombre)));
+    if (real) {
+      usados.add(real.id);
+      idDe.set(b.id, real.id);
+      return { ...real, reg: false };
+    }
+    idDe.set(b.id, `ejemplo-${b.id}`);
+    return { id: `ejemplo-${b.id}`, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir, reg: false };
+  });
+  const tapas = TAPAS.map(([bar, nombre, tipos, emoji, votos, media, ago, dias], i) => ({
+    id: `ejemplo-t${i + 1}`, bar: idDe.get(bar), fecha: dias ? dayBefore(dias) : fecha, at: new Date(now - ago * 60000).toISOString(),
+    nombre, tipos, nota: '', autor: 'ejemplo', votos, media, img: dibujo(emoji, i), mini: dibujo(emoji, i, true),
   }));
+  // La media de cada bar, juntando sus tapas.
+  for (const b of bares) {
+    const suyas = tapas.filter((x) => x.bar === b.id);
+    const votos = suyas.reduce((s, x) => s + x.votos, 0);
+    if (votos) Object.assign(b, { votos, media: Math.round((suyas.reduce((s, x) => s + x.media * x.votos, 0) / votos) * 10) / 10 });
+  }
+  // El resto de bares de verdad salen como puntos, igual que en la web normal.
+  for (const r of reales) if (!usados.has(r.id)) bares.push({ ...r, reg: false });
   return { fecha, bares, tapas };
 }

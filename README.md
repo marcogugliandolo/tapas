@@ -2,18 +2,18 @@
 
 Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil y en el ordenador, en castellano y en gallego. Mismo lenguaje que Xa Vén: interfaz neutra y limpia, y el color lo ponen las fotos; el pimentón solo marca subir y votar.
 
-- **El mapa con las fotos.** Cada bar con tapa hoy sale con la foto de su tapa y su contador de votos.
-- **«Hoy en Lugo».** Las tapas del día en fila, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y las tres más votadas.
-- **«¡Que tapa!».** Un voto por persona y día, sin cuentas.
+- **El mapa con las fotos.** Cada bar con tapa hoy sale con la foto de su tapa y su nota media.
+- **«Hoy en Lugo».** Las tapas del día en fila, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y las tres mejor valoradas.
+- **Notas de 1 a 5 estrellas.** Al abrir una tapa la puntúas (una nota por persona, tapa y día; se puede cambiar) y cada bar enseña su media juntando todas sus tapas. Sin cuentas.
 - **Sube tu tapa.** Cualquiera hace la foto de lo que le pusieron con la consumición. El móvil la reduce y le quita la ubicación antes de enviarla, y no sale hasta que se revisa.
-- **Panel del bar.** Cada bar dado de alta tiene un enlace privado: con él sube su tapa en 20 segundos, sale al momento con la marca «Foto del bar» y ve sus votos.
+- **Panel del bar.** Cada bar dado de alta tiene un enlace privado: con él sube su tapa en 20 segundos, sale al momento con la marca «Foto del bar» y ve su nota media.
 - **Todos los bares de Lugo.** El servidor descarga una vez al día los bares, cafeterías y restaurantes de OpenStreetMap, así que se puede subir la tapa de cualquiera aunque no se haya dado de alta. Cada uno tiene su botón «¿Es tu bar?».
 - **Cómo llegar a pie** dentro de la propia web: la ruta por las calles de Lugo dibujada en el mapa, con los minutos andando, y «Empezar» para que el mapa te siga hasta el bar sin que se apague la pantalla. También se puede abrir en Google Maps o en Mapas de Apple para que te vayan indicando.
 - **Tus bares** con la estrella, **cerca de ti** con la ubicación, **buscador** de bares y tapas, **compartir** cada bar con un enlace y **modo oscuro**.
 - **Se instala como una app** y abre sin cobertura con lo último que vio.
 - **Sin cuenta, sin cookies de seguimiento y sin publicidad.** Lo explica la página de [privacidad](app/privacidad/index.html).
 
-Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta bares y tapas inventados (con dibujos, no fotos) y avisa arriba de que es un ejemplo. No envía nada.
+Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta tapas conocidas de bares de Lugo (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica), en su sitio exacto si el servidor ya tiene los bares de OpenStreetMap. Las fotos son dibujos, las notas son inventadas y la web avisa arriba de que es un ejemplo. No envía nada.
 
 ## Desplegar en Portainer
 
@@ -76,7 +76,7 @@ Node 22 sin dependencias. Todo se guarda en ficheros JSON y JPEG dentro de `DATA
 | `GET /api/bar/<id>` | Un bar y sus últimas 40 tapas. |
 | `GET /api/fotos/<id>.jpg` | La foto grande (`<id>-m.jpg`, la miniatura del mapa). No cambian nunca: se guardan en caché un mes. |
 | `POST /api/tapas` | Sube una tapa. Con la clave del bar sale al momento; sin ella, espera a la moderación. |
-| `POST /api/fuego` | «¡Que tapa!»: un voto por persona, tapa y día. |
+| `POST /api/voto` | `{ tapa, nota }` con nota de 1 a 5: una por persona, tapa y día (si repite, se cambia). Se puntúan la tapa de hoy y la de ayer. |
 | `POST /api/altas` | Un bar pide el alta. |
 | `POST /api/panel` | Lo que ve el bar en su panel (con su clave). |
 | `POST /api/tapas/borrar` | El bar borra una tapa suya. |

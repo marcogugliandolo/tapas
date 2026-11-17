@@ -62,7 +62,7 @@ export function adminPage({ clave, aviso, pendientes, recientes, altas, reportes
     <div class="acciones">${btn('ver-enlace', b.id, 'Ver enlace')}${btn('nueva-clave', b.id, 'Nueva clave')}${btn('quitar-bar', b.id, 'Quitar', 'no')}</div></article>`).join('');
 
   const rec = recientes.map((t) => `<article class="tapa">${foto(t)}<div><strong>${e(t.nombre)}</strong><p>${e(nombreDe(t.bar))}</p>
-    <p class="meta">${e(when(t.at))} · ${t.autor === 'bar' ? 'del bar' : 'de un cliente'} · 🔥 ${t.fuegos}</p>
+    <p class="meta">${e(when(t.at))} · ${t.autor === 'bar' ? 'del bar' : 'de un cliente'} · ${t.votos ? `★ ${(t.suma / t.votos).toFixed(1).replace('.', ',')} (${t.votos} ${t.votos === 1 ? 'nota' : 'notas'})` : 'sin notas'}</p>
     <div class="acciones">${btn('borrar-tapa', t.id, 'Borrar', 'no')}</div></div></article>`).join('');
 
   const hid = ocultos.map((b) => `<article class="fila"><div><strong>${e(b.nombre)}</strong></div><div class="acciones">${btn('mostrar-bar', b.id, 'Volver a mostrar')}</div></article>`).join('');

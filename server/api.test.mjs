@@ -95,13 +95,17 @@ test('la foto de un cliente espera a la moderación y luego sale', async () => {
   assert.equal(big.headers.get('content-type'), 'image/jpeg');
 });
 
-test('«¡Que tapa!» cuenta una vez por persona y día', async () => {
+test('cada persona pone una nota por tapa y día, y la puede cambiar', async () => {
   const { tapas: [t] } = await (await fetch(`${url}/api/hoy`)).json();
-  assert.equal((await (await post('/api/fuego', { tapa: t.id })).json()).fuegos, 1);
-  const again = await (await post('/api/fuego', { tapa: t.id })).json();
-  assert.equal(again.fuegos, 1);
-  assert.equal(again.repetido, true);
-  assert.equal((await (await post('/api/fuego', { tapa: t.id }, '10.0.0.2')).json()).fuegos, 2);
+  assert.equal((await post('/api/voto', { tapa: t.id, nota: 6 })).status, 400);
+  assert.deepEqual(await (await post('/api/voto', { tapa: t.id, nota: 4 })).json(), { votos: 1, media: 4, nota: 4 });
+  assert.deepEqual(await (await post('/api/voto', { tapa: t.id, nota: 5 })).json(), { votos: 1, media: 5, nota: 5 });
+  assert.deepEqual(await (await post('/api/voto', { tapa: t.id, nota: 2 }, '10.0.0.2')).json(), { votos: 2, media: 3.5, nota: 2 });
+  const hoy = await (await fetch(`${url}/api/hoy`)).json();
+  assert.equal(hoy.tapas[0].media, 3.5);
+  const bar = hoy.bares.find((b) => b.id === t.bar);
+  assert.equal(bar.votos, 2);
+  assert.equal(bar.media, 3.5);
 });
 
 test('alta de un bar, su enlace y su panel', async () => {

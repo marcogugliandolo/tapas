@@ -28,10 +28,19 @@ const MAX_BAR_DIA = 8;
 const MAX_PENDIENTES_BAR = 6;
 
 /** Lo público de una tapa: lo que ve cualquiera. */
+/** La media de unas notas con un decimal (0 si no hay ninguna). */
+const mediaDe = (suma, votos) => (votos ? Math.round((suma / votos) * 10) / 10 : 0);
+
+/** Lo público de una tapa: lo que ve cualquiera. */
 const publicTapa = (t) => ({
-  id: t.id, bar: t.bar, fecha: t.fecha, at: t.at, nombre: t.nombre, tipos: t.tipos, nota: t.nota, foto: t.foto, autor: t.autor, fuegos: t.fuegos,
+  id: t.id, bar: t.bar, fecha: t.fecha, at: t.at, nombre: t.nombre, tipos: t.tipos, nota: t.nota, foto: t.foto, autor: t.autor,
+  votos: t.votos ?? 0, media: mediaDe(t.suma ?? 0, t.votos ?? 0),
 });
-const publicBar = (b, reg) => ({ id: b.id, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir || '', reg, ...(b.insta ? { insta: b.insta } : {}) });
+const publicBar = (b, reg, nota = null) => ({
+  id: b.id, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir || '', reg,
+  ...(b.insta ? { insta: b.insta } : {}),
+  ...(nota?.votos ? { votos: nota.votos, media: mediaDe(nota.suma, nota.votos) } : {}),
+});
 
 export function createApp({
   dataDir, now = Date.now, adminKey = '', notifyUrl = '', base = '', osm: osmOptions = {}, fetchImpl = fetch,
@@ -50,7 +59,7 @@ export function createApp({
   const load = (name) => { const v = loadJSON(file(name), []); return Array.isArray(v) ? v : []; };
   let bares = load('bares.json');
   let altas = load('altas.json');
-  let tapas = load('tapas.json');
+  let tapas = load('tapas.json').map((t) => ({ votos: 0, suma: 0, ...t }));
   let reportes = load('reportes.json');
   let ocultos = new Set(load('ocultos.json'));
   let dirty = false;
@@ -67,9 +76,11 @@ export function createApp({
   const subidasBar = createLimiter({ now, perHour: 30, perDay: 60 });
   const altasLimit = createLimiter({ now, perHour: 3, perDay: 6 });
   const mensajes = createLimiter({ now, perHour: 6, perDay: 20 });
-  const fuegosLimit = createLimiter({ now, perHour: 120, perDay: 400 });
+  const notasLimit = createLimiter({ now, perHour: 120, perDay: 400 });
   const paneles = createLimiter({ now, perHour: 60, perDay: 300 });
-  let votos = { dia: '', vistos: new Set() };
+  // Qué nota puso cada persona a cada tapa hoy (con la IP mezclada con el secreto del día): sirve
+  // para que pueda cambiarla sin contar dos veces. Solo en memoria; se olvida al día siguiente.
+  let notasHoy = { dia: '', puestas: new Map() };
 
   const registered = (id) => bares.find((b) => b.id === id) ?? null;
   /** Un bar por su id: los dados de alta mandan sobre los de OpenStreetMap. */
@@ -80,11 +91,24 @@ export function createApp({
     const fromOsm = osm.get(id);
     return fromOsm ? { bar: fromOsm, reg: false } : null;
   }
+  /** Notas de cada bar juntando todas sus tapas publicadas (las del último medio año). */
+  function notasPorBar() {
+    const out = new Map();
+    for (const t of tapas) {
+      if (t.estado !== 'publicada' || !t.votos) continue;
+      const n = out.get(t.bar) ?? { votos: 0, suma: 0 };
+      n.votos += t.votos;
+      n.suma += t.suma;
+      out.set(t.bar, n);
+    }
+    return out;
+  }
   function allBars() {
     const regIds = new Set(bares.map((b) => b.id));
+    const notas = notasPorBar();
     return [
-      ...bares.map((b) => publicBar(b, true)),
-      ...osm.list().filter((b) => !regIds.has(b.id) && !ocultos.has(b.id)).map((b) => publicBar(b, false)),
+      ...bares.map((b) => publicBar(b, true, notas.get(b.id))),
+      ...osm.list().filter((b) => !regIds.has(b.id) && !ocultos.has(b.id)).map((b) => publicBar(b, false, notas.get(b.id))),
     ];
   }
 
@@ -142,7 +166,7 @@ export function createApp({
     const found = barById(id);
     if (!found) return reply(res, 404, { error: 'no existe' });
     const list = tapas.filter((t) => t.bar === id && t.estado === 'publicada').sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40).map(publicTapa);
-    return reply(res, 200, { fecha: jornada(now()), bar: publicBar(found.bar, found.reg), tapas: list }, 20);
+    return reply(res, 200, { fecha: jornada(now()), bar: publicBar(found.bar, found.reg, notasPorBar().get(id)), tapas: list }, 20);
   }
 
   async function subir(req, res, from) {
@@ -180,7 +204,8 @@ export function createApp({
       foto: fotos.save(photos),
       autor: esBar ? 'bar' : 'cliente',
       estado: esBar ? 'publicada' : 'pendiente',
-      fuegos: 0,
+      votos: 0,
+      suma: 0,
     };
     tapas.push(tapa);
     persist.tapas();
@@ -188,20 +213,29 @@ export function createApp({
     return reply(res, 201, { ok: true, estado: tapa.estado, ...(esBar ? { tapa: publicTapa(tapa) } : {}) });
   }
 
-  async function fuego(req, res, from) {
+  /** Una nota de 1 a 5 a una tapa de hoy (o de anoche). Si la persona ya la puntuó hoy, se cambia. */
+  async function votar(req, res, from) {
     const { value } = await readJSON(req, 512);
+    const nota = Number(value?.nota);
+    if (!Number.isInteger(nota) || nota < 1 || nota > 5) return reply(res, 400, { error: 'la nota va de 1 a 5' });
     const t = tapas.find((x) => x.id === value?.tapa && x.estado === 'publicada');
     if (!t) return reply(res, 404, { error: 'no existe' });
     const dia = jornada(now());
-    if (votos.dia !== dia) votos = { dia, vistos: new Set() };
-    const key = `${fuegosLimit.source(from)}|${t.id}`;
-    if (votos.vistos.has(key)) return reply(res, 200, { fuegos: t.fuegos, repetido: true });
-    if (!fuegosLimit.allow(from)) return reply(res, 429, { error: 'demasiados' });
-    if (votos.vistos.size > 200000) votos.vistos.clear();
-    votos.vistos.add(key);
-    t.fuegos += 1;
+    if (diasEntre(t.fecha, dia) > 1) return reply(res, 400, { error: 'esta tapa ya no se puede puntuar' });
+    if (notasHoy.dia !== dia) notasHoy = { dia, puestas: new Map() };
+    const key = `${notasLimit.source(from)}|${t.id}`;
+    const antes = notasHoy.puestas.get(key);
+    if (antes === undefined && !notasLimit.allow(from)) return reply(res, 429, { error: 'demasiadas notas seguidas' });
+    if (antes === undefined) {
+      if (notasHoy.puestas.size > 200000) notasHoy.puestas.clear();
+      t.votos += 1;
+      t.suma += nota;
+    } else {
+      t.suma += nota - antes;
+    }
+    notasHoy.puestas.set(key, nota);
     dirty = true;
-    return reply(res, 200, { fuegos: t.fuegos });
+    return reply(res, 200, { votos: t.votos, media: mediaDe(t.suma, t.votos), nota });
   }
 
   async function alta(req, res, from) {
@@ -240,6 +274,11 @@ export function createApp({
     return { bar };
   }
 
+  const resumen = (list) => {
+    const votos = list.reduce((s, t) => s + t.votos, 0);
+    return { tapas: list.length, votos, media: mediaDe(list.reduce((s, t) => s + t.suma, 0), votos) };
+  };
+
   async function panel(req, res, from) {
     const { value } = await readJSON(req, 1024);
     const { bar, error } = ownerOf(value, from);
@@ -250,8 +289,8 @@ export function createApp({
       fecha,
       bar: publicBar(bar, true),
       tapas: mine.slice(0, 30).map(publicTapa),
-      hoy: { tapas: mine.filter((t) => t.fecha === fecha).length, fuegos: mine.filter((t) => t.fecha === fecha).reduce((s, t) => s + t.fuegos, 0) },
-      total: { tapas: mine.length, fuegos: mine.reduce((s, t) => s + t.fuegos, 0) },
+      hoy: resumen(mine.filter((t) => t.fecha === fecha)),
+      total: resumen(mine),
     });
   }
 
@@ -412,7 +451,7 @@ export function createApp({
     if (req.method === 'GET' && barMatch) return barInfo(res, barMatch[1]);
     if (req.method === 'POST') {
       if (path === '/api/tapas') return subir(req, res, from);
-      if (path === '/api/fuego') return fuego(req, res, from);
+      if (path === '/api/voto') return votar(req, res, from);
       if (path === '/api/altas') return alta(req, res, from);
       if (path === '/api/panel') return panel(req, res, from);
       if (path === '/api/tapas/borrar') return borrarPropia(req, res, from);

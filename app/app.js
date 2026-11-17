@@ -45,7 +45,7 @@ const state = {
   query: '',
   me: null,
   favs: [],
-  fuegos: {},
+  notas: {}, // las notas que has puesto: { idTapa: { nota, fecha } }
   mine: null,
   upload: null,
   alta: null,
@@ -64,7 +64,7 @@ const store = {
   del(key) { try { localStorage.removeItem(key); } catch { /* nada */ } },
 };
 state.favs = store.get('quetapa-favs', []).filter((x) => typeof x === 'string').slice(0, 30);
-state.fuegos = store.get('quetapa-fuegos', {});
+state.notas = store.get('quetapa-notas', {});
 state.mine = store.get('quetapa-mibar', null);
 
 /* ---------- Fechas y textos ---------- */
@@ -119,14 +119,17 @@ function apply(data) {
   }
   state.loaded = true;
   state.version += 1;
-  for (const [id, fecha] of Object.entries(state.fuegos)) if (daysBetween(fecha, state.fecha) > 7) delete state.fuegos[id];
-  store.set('quetapa-fuegos', state.fuegos);
+  for (const [id, n] of Object.entries(state.notas)) if (!n?.fecha || daysBetween(n.fecha, state.fecha) > 7) delete state.notas[id];
+  store.set('quetapa-notas', state.notas);
 }
 
 async function loadToday({ quiet = false } = {}) {
   if (DEMO) {
     const { demoData } = await import('./demo.js');
-    apply(demoData(t));
+    // Con los bares de verdad del servidor, los del ejemplo salen en su sitio exacto.
+    let reales = [];
+    try { const res = await fetch(`${API}/hoy`, { cache: 'no-store' }); if (res.ok) reales = (await res.json()).bares ?? []; } catch { /* sin servidor: posiciones aproximadas */ }
+    apply(demoData(reales));
   } else {
     try {
       const res = await fetch(`${API}/hoy`, { cache: 'no-store' });
@@ -378,8 +381,8 @@ function paintPin(entry, bar, tapa, rank) {
   const want = src(tapa, true);
   if (img.getAttribute('src') !== want) img.src = want;
   const fl = el.querySelector('.fl');
-  fl.hidden = !(today && tapa.fuegos > 0);
-  fl.innerHTML = `${FLAME}${tapa.fuegos}`;
+  fl.hidden = !(tapa.votos > 0);
+  fl.innerHTML = `${STAR_FILL}${fmtMedia(tapa.media)}`;
   el.querySelector('.pin-name').textContent = bar.nombre;
   el.setAttribute('aria-label', `${tapa.nombre} · ${bar.nombre}`);
   entry.rank = (today ? 0 : 1000) + rank;
@@ -392,7 +395,7 @@ function updateMap() {
     shownVersion = state.version;
     map.getSource('bares')?.setData(barsGeoJSON());
   }
-  const ranked = [...state.latest.values()].filter(isToday).sort((a, b) => b.fuegos - a.fuegos);
+  const ranked = [...state.latest.values()].filter(isToday).sort(byRating);
   const rankOf = new Map(ranked.map((x, i) => [x.id, i]));
   const keep = new Set();
   for (const [barId, tapa] of state.latest) {
@@ -433,7 +436,7 @@ function updateMap() {
   declutter();
 }
 
-/** Si dos fotos se tapan, se queda la más votada de hoy (y siempre la del bar abierto). */
+/** Si dos fotos se tapan, se queda la mejor valorada de hoy (y siempre la del bar abierto). */
 let declutterQueued = false;
 function scheduleDeclutter() {
   if (declutterQueued) return;
@@ -468,14 +471,16 @@ function locate() {
 /* ---------- Trocitos de las pantallas ---------- */
 const svg = (body, size = 20, extra = '') => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;
 const BACK_ICON = svg('<path d="M15 5l-7 7 7 7"></path>', 20);
-const STAR = svg('<path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"></path>', 20);
+const STAR_PATH = '<path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"></path>';
+const STAR = svg(STAR_PATH, 20);
+const STAR_FILL = svg(STAR_PATH, 14, ' class="star-fill"');
+const BOOKMARK = svg('<path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"></path>', 20);
 const SHARE = svg('<path d="M12 15V3M7 8l5-5 5 5"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>', 20);
 const PIN_ICON = svg('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle>', 18);
 const SHIELD = svg('<path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6z"></path><path d="M9 12l2 2 4-4"></path>', 18);
 const BUBBLE = svg('<path d="M4 5h16v11H10l-5 4v-4H4z"></path><path d="M12 8.5v3M12 13.8v.2"></path>', 18);
 const CAMERA = svg('<path d="M4 8.5h3l1.8-2.5h6.4L17 8.5h3V19H4z"></path><circle cx="12" cy="13.2" r="3.4"></circle>', 20);
 const IMAGE = svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M20.5 16l-5-5L6 19.5"></path>', 20);
-const FLAME = svg('<path d="M12 21c-3.9 0-6.8-2.7-6.8-6.4 0-2.9 1.7-4.9 3.4-6.6.3 1.5 1.2 2.6 2.3 3C10.9 7.4 12.4 5 14.4 3.3c.2 2.6 1.6 4.4 2.8 5.9 1 1.2 1.6 2.6 1.6 4.4C18.8 18 15.8 21 12 21z"></path>', 18);
 const CHECK = svg('<path d="M5 12.5l4.2 4.2L19 7"></path>', 20);
 const STORE = svg('<path d="M4 10v10h16V10"></path><path d="M3 10l2-6h14l2 6"></path><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"></path><path d="M10 20v-5h4v5"></path>', 20);
 const GLASS = svg('<path d="M7 3h10l-1 7a4 4 0 0 1-8 0z"></path><path d="M12 14v7M8.5 21h7"></path>', 20);
@@ -486,7 +491,12 @@ const CLOCK_ICON = svg('<circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.
 const MAP_ICON = svg('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"></path><path d="M9 4v14M15 6v14"></path>', 20);
 const WALK = svg('<circle cx="13" cy="4.5" r="1.8"></circle><path d="M10.5 21l2-6.5-2.5-2.5 1-4.5 3 2.5 3 1"></path><path d="M11 8l-3 1.5-1 3.5M12.5 14.5l2.5 2.5 1 4"></path>', 20);
 const NAV = svg('<path d="M12 3l7 18-7-4-7 4z"></path>', 20);
-const flame = (n) => `<span class="votes">${FLAME}${n}</span>`;
+const fmtMedia = (m) => Number(m || 0).toFixed(1).replace('.', ',');
+const rating = (x) => (x?.votos ? `<span class="votes">${STAR_FILL}${fmtMedia(x.media)}</span>` : '');
+/** Mejor nota primero; a igual nota, la que tiene más; sin notas, al final. */
+const byRating = (a, b) => (b.votos > 0) - (a.votos > 0) || b.media - a.media || b.votos - a.votos || b.at.localeCompare(a.at);
+/** Se puede puntuar la tapa de hoy y la de anoche. */
+const canRate = (tapa) => Boolean(state.fecha) && daysBetween(tapa.fecha, state.fecha) <= 1;
 
 const back = () => `<button type="button" class="back" data-act="back" aria-label="${t('Volver')}" title="${t('Volver')}">${BACK_ICON}</button>`;
 const privacyHref = () => (getLang() === 'gl' ? '/privacidade/' : '/privacidad/');
@@ -500,14 +510,14 @@ function langSwitch() {
   const lang = getLang();
   return `<div class="lang" role="group" aria-label="${t('Idioma')}"><button type="button" data-act="lang" data-lang="es" aria-pressed="${lang === 'es'}">Castellano</button><button type="button" data-act="lang" data-lang="gl" aria-pressed="${lang === 'gl'}">Galego</button></div>`;
 }
-const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Bares y tapas inventados para ver cómo queda. No se envía nada.')}</span></p>` : '');
+const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Tapas conocidas de bares de Lugo para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>` : '');
 const tip = (icon, text) => `<li><span class="tip-icon">${icon}</span><span>${text}</span></li>`;
 const nowCard = ({ act, to = '', bar = '', icon, label = '', title, sub = '', line = false }) => `<button type="button" class="now${line ? ' line' : ''}" data-act="${act}"${to !== '' ? ` data-to="${esc(to)}"` : ''}${bar ? ` data-bar="${esc(bar)}"` : ''}><span class="now-icon">${icon}</span><span class="now-text">${label ? `<span class="now-label">${label}</span>` : ''}<strong>${title}</strong>${sub ? `<small>${sub}</small>` : ''}</span><span class="now-go" aria-hidden="true">›</span></button>`;
 
 function card(tapa) {
   const bar = state.barById.get(tapa.bar);
   return `<button type="button" class="card${isToday(tapa) ? '' : ' old'}" data-act="open-tapa" data-bar="${esc(tapa.bar)}" data-tapa="${esc(tapa.id)}">
-    <span class="ph"><img src="${esc(src(tapa))}" alt="" loading="lazy" decoding="async">${isNew(tapa) ? `<span class="new">${t('Nueva')}</span>` : ''}${tapa.fuegos ? flame(tapa.fuegos) : ''}</span>
+    <span class="ph"><img src="${esc(src(tapa))}" alt="" loading="lazy" decoding="async">${isNew(tapa) ? `<span class="new">${t('Nueva')}</span>` : ''}${rating(tapa)}</span>
     <strong>${esc(tapa.nombre)}</strong><small>${esc(bar?.nombre ?? '')} · ${esc(ago(tapa))}</small></button>`;
 }
 
@@ -519,7 +529,7 @@ function barRow(bar, extra = '') {
 }
 
 function filtered(list) {
-  if (state.filter === 'top') return [...list].sort((a, b) => b.fuegos - a.fuegos || b.at.localeCompare(a.at));
+  if (state.filter === 'top') return [...list].sort(byRating);
   if (TIPOS[state.filter]) return list.filter((x) => x.tipos?.includes(state.filter));
   return list;
 }
@@ -531,7 +541,7 @@ function homeHTML() {
   const list = filtered(today);
   const counts = Object.fromEntries(Object.keys(TIPOS).map((k) => [k, today.filter((x) => x.tipos?.includes(k)).length]));
   const chip = (key, label, n) => `<button type="button" data-act="filter" data-filter="${key}" aria-pressed="${state.filter === key}">${label}${n ? ` <span class="n">${n}</span>` : ''}</button>`;
-  const filters = today.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), 0)}${chip('top', t('Las más votadas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
+  const filters = today.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), 0)}${chip('top', t('Las mejor valoradas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
 
   const sub = `${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa', '{n} tapas')}` : ''}`;
   const title = `<p class="eyebrow"><img src="icon.svg" width="22" height="22" alt=""><span>Que Tapa!</span> ${t('Las tapas de Lugo')}</p>
@@ -546,9 +556,9 @@ function homeHTML() {
       <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
   }
 
-  const ranked = [...today].filter((x) => x.fuegos > 0).sort((a, b) => b.fuegos - a.fuegos || a.at.localeCompare(b.at)).slice(0, 3);
-  const podium = ranked.length ? `<section class="rows"><h2>${t('Las más votadas hoy')}</h2>
-    ${ranked.map((x, i) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="rank${i === 0 ? ' first' : ''}">${i + 1}</span><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')}</small></span><span class="score">${FLAME}${x.fuegos}</span></button>`).join('')}</section>` : '';
+  const ranked = [...today].filter((x) => x.votos > 0).sort(byRating).slice(0, 3);
+  const podium = ranked.length ? `<section class="rows"><h2>${t('Las mejor valoradas hoy')}</h2>
+    ${ranked.map((x, i) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="rank${i === 0 ? ' first' : ''}">${i + 1}</span><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')}</small></span><span class="score">${STAR_FILL}${fmtMedia(x.media)}</span></button>`).join('')}</section>` : '';
 
   const near = state.me ? (() => {
     const bars = state.bares.map((b) => ({ b, d: distance(state.me, b) })).filter((x) => x.d < 1500).sort((a, b) => {
@@ -562,14 +572,14 @@ function homeHTML() {
   const favBars = state.favs.map((id) => state.barById.get(id)).filter(Boolean);
   const favs = favBars.length ? `<section class="rows"><h2>${t('Tus bares')}</h2>${favBars.map((b) => barRow(b)).join('')}</section>` : '';
 
-  const myBar = state.mine ? nowCard({ act: 'go', to: 'panel', icon: STORE, label: t('Tu bar'), title: esc(state.barById.get(state.mine.bar)?.nombre ?? state.mine.nombre ?? ''), sub: t('Sube la tapa de hoy y mira tus votos') }) : '';
+  const myBar = state.mine ? nowCard({ act: 'go', to: 'panel', icon: STORE, label: t('Tu bar'), title: esc(state.barById.get(state.mine.bar)?.nombre ?? state.mine.nombre ?? ''), sub: t('Sube la tapa de hoy y mira tus notas') }) : '';
   const promo = state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
 
   const lastDays = older.length && today.length < 6 ? `<section class="section"><h2>${t('Estos días')}</h2><div class="reel">${older.slice(0, 12).map(card).join('')}</div></section>` : '';
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
   return `${title}${demoBanner()}${offline}${myBar}${main}${podium}${near}${favs}${lastDays}${promo}
-    <ul class="tips">${tip(FLAME, t('Pulsa «¡Que tapa!» en las que te gusten: las más votadas salen arriba.'))}${state.favs.length ? '' : tip(STAR, t('Guarda tus bares con la estrella y los verás aquí al abrir.'))}</ul>
+    <ul class="tips">${tip(STAR, t('Puntúa las tapas que pruebes: las mejor valoradas salen arriba.'))}${state.favs.length ? '' : tip(BOOKMARK, t('Guarda tus bares y los verás aquí al abrir.'))}</ul>
     ${langSwitch()}${foot()}`;
 }
 
@@ -582,23 +592,27 @@ function barHTML() {
   const fav = state.favs.includes(bar.id);
   const owner = state.mine?.bar === bar.id;
 
-  const headHTML = `<div class="head">${back()}<div><h1>${esc(bar.nombre)}</h1><small>${bar.reg ? t('El bar sube sus tapas') : esc(bar.dir || t('Bar de Lugo'))}</small></div>
-    <button type="button" class="icon-btn${fav ? ' on' : ''}" data-act="fav" aria-pressed="${fav}" aria-label="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}" title="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}">${STAR}</button>
+  const media = bar.votos ? `<span class="bar-rating">${STAR_FILL}<b>${fmtMedia(bar.media)}</b> ${t('de media')} · ${plural(bar.votos, '1 nota', '{n} notas')}</span>` : '';
+  const headHTML = `<div class="head">${back()}<div><h1>${esc(bar.nombre)}</h1><small>${media || (bar.reg ? t('El bar sube sus tapas') : esc(bar.dir || t('Bar de Lugo')))}</small></div>
+    <button type="button" class="icon-btn${fav ? ' on' : ''}" data-act="fav" aria-pressed="${fav}" aria-label="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}" title="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}">${BOOKMARK}</button>
     <button type="button" class="icon-btn" data-act="share" aria-label="${t('Compartir')}" title="${t('Compartir')}">${SHARE}</button></div>`;
 
   let body;
   if (tapa) {
-    const voted = Boolean(state.fuegos[tapa.id]);
+    const mine = state.notas[tapa.id]?.nota ?? 0;
     const tags = [
       isToday(tapa) ? `<span class="tag today">${t('Hoy')} · ${esc(ago(tapa))}</span>` : `<span class="tag">${CLOCK_ICON}${esc(ago(tapa))}</span>`,
-      tapa.autor === 'bar' ? `<span class="tag">${CHECK}${t('Foto del bar')}</span>` : `<span class="tag">${t('Foto de un cliente')}</span>`,
+      tapa.autor === 'ejemplo' ? `<span class="tag">${t('Ejemplo')}</span>` : tapa.autor === 'bar' ? `<span class="tag">${CHECK}${t('Foto del bar')}</span>` : `<span class="tag">${t('Foto de un cliente')}</span>`,
     ].join('');
     const tipos = (tapa.tipos ?? []).filter((k) => TIPOS[k]).map(tipoLabel).join(' · ');
     body = `<div class="photo"><img src="${esc(src(tapa))}" alt="${esc(tapa.nombre)}"><div class="tags">${tags}</div></div>
       <div class="tapa-meta"><h2 class="big-line">${esc(tapa.nombre)}</h2>${tipos ? `<small>${esc(tipos)}</small>` : ''}</div>
       ${tapa.nota ? `<p class="nota">${esc(tapa.nota)}</p>` : ''}
-      ${isToday(tapa) ? `<button type="button" class="vote${voted ? ' on' : ''}" data-act="fuego" data-tapa="${esc(tapa.id)}" aria-pressed="${voted}">${FLAME}<span>${voted ? t('¡Votada!') : t('¡Que tapa!')}</span><span class="sep"></span><b>${tapa.fuegos}</b></button>`
-        : `<p class="note">${t('Esta es la última que vimos. ¿Vas hoy? Sube la de hoy y aparecerá aquí.')}</p>`}`;
+      ${canRate(tapa) ? `<div class="rate">
+          <div class="rate-head"><strong>${mine ? t('Tu nota') : t('¿Qué te pareció?')}</strong><small>${tapa.votos ? `${STAR_FILL}${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}` : t('Sé el primero en puntuarla')}</small></div>
+          <div class="stars" role="group" aria-label="${t('Tu nota')}">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= mine ? 'on' : ''}" data-act="rate" data-tapa="${esc(tapa.id)}" data-nota="${n}" aria-pressed="${n === mine}" aria-label="${plural(n, '1 estrella', '{n} estrellas')}">${STAR}</button>`).join('')}</div>
+          ${mine ? `<small class="rate-note">${t('Puedes cambiarla hasta mañana.')}</small>` : ''}</div>`
+        : `${tapa.votos ? `<p class="note">${STAR_FILL} ${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}</p>` : ''}<p class="note">${t('Esta es la última que vimos. ¿Vas hoy? Sube la de hoy y aparecerá aquí.')}</p>`}`;
   } else {
     body = `<div class="photo none"><div>${CAMERA}<strong>${t('Aún no sabemos qué tapa ponen')}</strong><span>${t('Si estás allí, hazle una foto y sé el primero.')}</span></div></div>`;
   }
@@ -613,7 +627,7 @@ function barHTML() {
 
   const claim = !bar.reg && !owner ? nowCard({ act: 'go', to: `alta/${bar.id}`, icon: STORE, title: t('¿Es tu bar?'), sub: t('Sube tú la tapa cada día y sal destacado en el mapa. Gratis.'), line: true }) : '';
 
-  return `${headHTML}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
+  return `${headHTML}${demoBanner()}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
 }
 const shortDate = (fecha) => { const d = new Date(`${fecha}T12:00:00Z`); return `${d.getUTCDate()} ${MESES[getLang()][d.getUTCMonth()].slice(0, 3)}`; };
 
@@ -632,10 +646,10 @@ function searchResults(q) {
   }
   const words = q.split(/\s+/);
   const match = (s) => { const n = norm(s); return words.every((w) => n.includes(w)); };
-  const tapas = state.tapas.filter((x) => match(x.nombre)).sort((a, b) => (isToday(b) - isToday(a)) || b.fuegos - a.fuegos).slice(0, 12);
+  const tapas = state.tapas.filter((x) => match(x.nombre)).sort((a, b) => (isToday(b) - isToday(a)) || byRating(a, b)).slice(0, 12);
   const bars = state.bares.filter((b) => match(`${b.nombre} ${b.dir}`)).sort((a, b) => (state.latest.has(b.id) - state.latest.has(a.id)) || a.nombre.localeCompare(b.nombre)).slice(0, 25);
   if (!tapas.length && !bars.length) return `<p class="empty">${t('No encontramos nada con «{q}».', { q: esc(state.query.trim()) })}</p>`;
-  return `${tapas.length ? `<section class="rows"><h2>${t('Tapas')}</h2>${tapas.map((x) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')} · ${esc(ago(x))}</small></span>${x.fuegos ? `<span class="score">${FLAME}${x.fuegos}</span>` : ''}</button>`).join('')}</section>` : ''}
+  return `${tapas.length ? `<section class="rows"><h2>${t('Tapas')}</h2>${tapas.map((x) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')} · ${esc(ago(x))}</small></span>${x.votos ? `<span class="score">${STAR_FILL}${fmtMedia(x.media)}</span>` : ''}</button>`).join('')}</section>` : ''}
     ${bars.length ? `<section class="rows"><h2>${t('Bares')}</h2>${bars.map((b) => barRow(b)).join('')}</section>` : ''}`;
 }
 
@@ -704,7 +718,7 @@ function altaHTML() {
   const ready = a.nombre.trim().length >= 2 && a.contacto.trim().length >= 5 && located && !a.sending;
   return `${head}${demoBanner()}<ul class="tips">
       ${tip(CAMERA, t('Subes tu tapa del día en 20 segundos desde el móvil del bar.'))}
-      ${tip(FLAME, t('La gente la vota y las más votadas salen arriba.'))}
+      ${tip(STAR, t('La gente la puntúa y las mejor valoradas salen arriba.'))}
       ${tip(CHECK, t('Tus fotos llevan la marca «Foto del bar».'))}</ul>
     <div class="form">
     ${a.osm ? where : `<label class="field"><span>${t('Nombre del bar')}</span><input id="al-nombre" value="${esc(a.nombre)}" maxlength="60" autocomplete="organization"></label>
@@ -732,8 +746,8 @@ function panelHTML() {
     : tip(PHONE, /iP(hone|ad|od)/.test(navigator.userAgent) ? t('Guárdalo en la pantalla de inicio: botón Compartir › «Añadir a pantalla de inicio».') : t('Guárdalo en la pantalla de inicio desde el menú del navegador.'));
   return `${head(esc(p.bar.nombre), t('Panel de tu bar'))}
     <button type="button" class="cta brand-btn" data-act="upload" data-bar="${esc(p.bar.id)}">${CAMERA}${today.length ? t('Subir otra tapa') : t('Subir la tapa de hoy')}</button>
-    <div class="stats"><div class="stat hot"><b>${p.hoy.fuegos}</b><small>${t('votos hoy')}</small></div><div class="stat"><b>${p.total.tapas}</b><small>${t('tapas subidas')}</small></div></div>
-    ${today.length ? `<section class="section"><h2>${t('Hoy')}</h2>${today.map((x) => `<div class="mine"><img src="${esc(src(x, true))}" alt=""><div><strong>${esc(x.nombre)}</strong><small>${esc(ago(x))} · ${plural(x.fuegos, '1 voto', '{n} votos')}</small></div>
+    <div class="stats"><div class="stat hot"><b>${p.total.votos ? fmtMedia(p.total.media) : '–'}</b><small>${p.total.votos ? `${t('de media')} · ${plural(p.total.votos, '1 nota', '{n} notas')}` : t('aún sin notas')}</small></div><div class="stat"><b>${p.total.tapas}</b><small>${t('tapas subidas')}</small></div></div>
+    ${today.length ? `<section class="section"><h2>${t('Hoy')}</h2>${today.map((x) => `<div class="mine"><img src="${esc(src(x, true))}" alt=""><div><strong>${esc(x.nombre)}</strong><small>${esc(ago(x))} · ${x.votos ? `${fmtMedia(x.media)} ${t('de media')} (${x.votos})` : t('aún sin notas')}</small></div>
       ${x.autor === 'bar' ? `<button type="button" class="ghost" data-act="del-tapa" data-tapa="${esc(x.id)}">${state.confirmDelete === x.id ? t('¿Seguro? Borrar') : t('Borrar')}</button>` : ''}</div>`).join('')}</section>` : `<p class="empty">${t('Hoy todavía no subiste ninguna. Las primeras del día salen arriba del todo.')}</p>`}
     <section class="section"><h2>${t('Que te encuentren')}</h2>
       <button type="button" class="cta second" data-act="share-bar" data-bar="${esc(p.bar.id)}">${SHARE}${t('Compartir el enlace de tu bar')}</button></section>
@@ -1036,7 +1050,7 @@ async function loadPanel() {
   if (DEMO) {
     const bar = state.barById.get(state.mine.bar) ?? state.bares[0];
     const mine = state.tapas.filter((x) => x.bar === bar.id);
-    state.panel = { fecha: state.fecha, bar, tapas: mine, hoy: { tapas: mine.filter(isToday).length, fuegos: mine.filter(isToday).reduce((s, x) => s + x.fuegos, 0) }, total: { tapas: mine.length, fuegos: 0 } };
+    state.panel = { fecha: state.fecha, bar, tapas: mine, hoy: { tapas: mine.filter(isToday).length }, total: { tapas: mine.length, votos: bar.votos ?? 0, media: bar.media ?? 0 } };
     render();
     return;
   }
@@ -1138,22 +1152,34 @@ async function sendUpload() {
   render();
 }
 
-/* ---------- «¡Que tapa!» ---------- */
-async function fuego(id, button) {
-  const tapa = state.tapas.find((x) => x.id === id) ?? state.bar?.tapas.find((x) => x.id === id);
-  if (!tapa || state.fuegos[id]) return;
-  navigator.vibrate?.(20);
-  state.fuegos[id] = tapa.fecha;
-  store.set('quetapa-fuegos', state.fuegos);
+/* ---------- Notas de 1 a 5 ---------- */
+async function rate(id, nota) {
   const all = [state.tapas.find((x) => x.id === id), state.bar?.tapas.find((x) => x.id === id)].filter(Boolean);
-  for (const x of new Set(all)) x.fuegos += 1;
+  const tapa = all[0];
+  if (!tapa || !canRate(tapa)) return;
+  const antes = state.notas[id]?.nota ?? 0;
+  if (antes === nota) return;
+  // Se pinta al momento con la cuenta aproximada; luego manda la que devuelve el servidor.
+  const votos = tapa.votos + (antes ? 0 : 1);
+  const media = (tapa.media * tapa.votos - antes + nota) / votos;
+  for (const x of new Set(all)) Object.assign(x, { votos, media });
+  // Y la media del bar, que junta todas sus tapas.
+  for (const b of new Set([state.barById.get(tapa.bar), state.bar?.bar].filter((b) => b?.id === tapa.bar))) {
+    const bv = (b.votos ?? 0) + (antes ? 0 : 1);
+    b.media = ((b.media ?? 0) * (b.votos ?? 0) - antes + nota) / bv;
+    b.votos = bv;
+  }
+  state.notas[id] = { nota, fecha: tapa.fecha };
+  store.set('quetapa-notas', state.notas);
+  navigator.vibrate?.(15);
   render();
   if (DEMO) return;
   try {
-    const { fuegos } = await postJSON('/fuego', { tapa: id });
-    for (const x of new Set(all)) x.fuegos = fuegos;
+    const res = await postJSON('/voto', { tapa: id, nota });
+    for (const x of new Set(all)) Object.assign(x, { votos: res.votos, media: res.media });
     render();
-  } catch { /* se queda como está */ }
+    loadToday({ quiet: true });
+  } catch (err) { toast(errorText(err)); }
 }
 
 /* ---------- Compartir ---------- */
@@ -1197,7 +1223,7 @@ function bindSheet() {
         break;
       case 'pick-tapa': state.tapaId = d.tapa; render(); $('#sheet-body').scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); break;
       case 'filter': state.filter = d.filter; render(); break;
-      case 'fuego': fuego(d.tapa, el); break;
+      case 'rate': rate(d.tapa, Number(d.nota)); break;
       case 'fav': {
         const id = state.barId;
         state.favs = state.favs.includes(id) ? state.favs.filter((x) => x !== id) : [id, ...state.favs].slice(0, 30);
