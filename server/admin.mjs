@@ -70,19 +70,19 @@ export function adminPage({ clave, aviso, pendientes, recientes, altas, reportes
   const section = (title, count, body, empty) => `<section><h2>${title}${count ? ` <span class="n">${count}</span>` : ''}</h2>${body || `<p class="vacio">${empty}</p>`}</section>`;
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Que Tapa! · Moderación</title><style>
-*{box-sizing:border-box}body{margin:0;padding:20px 16px 48px;font:16px/1.45 system-ui,sans-serif;background:#FFF6EC;color:#24130C}main{max-width:780px;margin:0 auto}
-h1{font-size:28px;margin:0 0 2px;letter-spacing:-.02em}h1 b{color:#F0431C}p.sub{margin:0 0 20px;color:#6B5345}
-h2{font-size:19px;margin:28px 0 10px}h2 .n{display:inline-block;min-width:26px;padding:0 8px;border-radius:13px;background:#F0431C;color:#fff;font-size:14px;text-align:center}
-article{background:#fff;border-radius:16px;padding:14px 16px;margin:0 0 10px;box-shadow:0 1px 6px rgba(60,20,0,.08)}article p{margin:4px 0}
-.tapa{display:flex;gap:14px;align-items:flex-start}.tapa img{width:96px;height:96px;object-fit:cover;border-radius:12px;background:#F3E3D3;display:block}
+*{box-sizing:border-box}body{margin:0;padding:20px 16px 48px;font:16px/1.45 system-ui,sans-serif;background:#F0F2F0;color:#121416}main{max-width:780px;margin:0 auto}
+h1{font-size:28px;margin:0 0 2px;letter-spacing:-.02em}h1 b{color:#E4472B}p.sub{margin:0 0 20px;color:#4A5158}
+h2{font-size:19px;margin:28px 0 10px}h2 .n{display:inline-block;min-width:26px;padding:0 8px;border-radius:13px;background:#E4472B;color:#fff;font-size:14px;text-align:center}
+article{background:#fff;border-radius:16px;padding:14px 16px;margin:0 0 10px;box-shadow:0 1px 6px rgba(18,20,22,.08)}article p{margin:4px 0}
+.tapa{display:flex;gap:14px;align-items:flex-start}.tapa img{width:96px;height:96px;object-fit:cover;border-radius:12px;background:#E6E8E6;display:block}
 .fila{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.meta{color:#6B5345;font-size:14px}.meta a{color:inherit}.msg{white-space:pre-wrap}.vacio{color:#6B5345}
-.chip{display:inline-block;padding:2px 10px;border-radius:10px;background:#24130C;color:#fff;font-size:13px;font-weight:700}
+.meta{color:#4A5158;font-size:14px}.meta a{color:inherit}.msg{white-space:pre-wrap}.vacio{color:#4A5158}
+.chip{display:inline-block;padding:2px 10px;border-radius:10px;background:#121416;color:#fff;font-size:13px;font-weight:700}
 .acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}form{margin:0}
-button,.boton{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border:0;border-radius:12px;background:#F3E3D3;color:#24130C;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
-button.si,.boton{background:#F0431C;color:#fff}button.no{background:transparent;color:#B42318;border:2px solid #F3D2CC}
+button,.boton{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border:0;border-radius:12px;background:#E6E8E6;color:#121416;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
+button.si,.boton{background:#E4472B;color:#fff}button.no{background:transparent;color:#B42318;border:2px solid #F2C9C4}
 .aviso{border-radius:16px;padding:14px 16px;margin:0 0 16px}.aviso.ok{background:#E3F7E8}.aviso.error{background:#FDE4E1}.aviso h2{margin:0 0 6px}
-.aviso input{width:100%;padding:10px 12px;border:1px solid #C9B6A6;border-radius:10px;font:inherit;font-size:14px;background:#fff}
+.aviso input{width:100%;padding:10px 12px;border:1px solid #C9CDCF;border-radius:10px;font:inherit;font-size:14px;background:#fff}
 </style></head><body><main>
 <h1><b>Que Tapa!</b> · moderación</h1><p class="sub">Guarda esta página en favoritos y no la compartas. ${osmCount} sitios de OpenStreetMap en el mapa.</p>
 ${banner}

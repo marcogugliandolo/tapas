@@ -8,7 +8,8 @@ const code = read('app.js') + read('index.html');
 const found = new Set();
 for (const m of code.matchAll(/\bt\(\s*'((?:[^'\\]|\\.)*)'/g)) found.add(m[1]);
 for (const m of code.matchAll(/data-t(?:-label|-placeholder)?="([^"]+)"/g)) found.add(m[1]);
-for (const m of code.matchAll(/^\s+[\w'-]+: \['[^']+', '([^']+)'\],?$/gm)) found.add(m[1]);
+const tipos = code.match(/TIPOS = \{([\s\S]*?)\};/)?.[1] ?? '';
+for (const m of tipos.matchAll(/: '([^']+)'/g)) found.add(m[1]);
 const kinds = code.match(/REPORT_KINDS = \{([\s\S]*?)\};/)?.[1] ?? '';
 for (const m of kinds.matchAll(/: '([^']+)'/g)) found.add(m[1]);
 for (const m of code.matchAll(/plural\([^,]+, '([^']+)', '([^']+)'\)/g)) { found.add(m[1]); found.add(m[2]); }

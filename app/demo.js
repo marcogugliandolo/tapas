@@ -2,29 +2,18 @@
 // llena, por ejemplo para enseñársela a un bar. Los nombres son ficticios a propósito y las «fotos»
 // son dibujos: nada de esto se envía al servidor y la web lo avisa arriba.
 
-const FONDOS = [
-  ['#D9A066', '#9C5A33'],
-  ['#C9824A', '#7A3B22'],
-  ['#5B6770', '#262C31'],
-  ['#E7B77E', '#B5713F'],
-  ['#B85C38', '#4E2316'],
-  ['#7E5A44', '#3A2418'],
-];
+// Fondos suaves, como de mesa clara: la foto real será la que dé el color.
+const FONDOS = ['#F3E6D8', '#E8EEF0', '#F1E4E1', '#E9EFE3', '#F4EBD6', '#ECE7F1'];
 
-/** Un dibujo de la tapa en su plato, sobre una mesa de madera. */
+/** Un dibujo sencillo de la tapa en su plato. */
 function dibujo(emoji, fondo, square = false) {
-  const [a, b] = FONDOS[fondo % FONDOS.length];
-  const vetas = Array.from({ length: 7 }, (_, i) => `<path d="M-20 ${40 + i * 64} C 150 ${20 + i * 64}, 420 ${70 + i * 64}, 620 ${36 + i * 64}" />`).join('');
+  const color = FONDOS[fondo % FONDOS.length];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${square ? '75 0 450 450' : '0 0 600 450'}">
-<defs><radialGradient id="g" cx="50%" cy="38%" r="80%"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>
-<radialGradient id="p" cx="50%" cy="42%" r="60%"><stop offset=".72" stop-color="#fffaf3"/><stop offset="1" stop-color="#e8dccd"/></radialGradient></defs>
-<rect x="0" y="0" width="600" height="450" fill="url(#g)"/>
-<g fill="none" stroke="#000" stroke-opacity=".10" stroke-width="3">${vetas}</g>
-<ellipse cx="306" cy="256" rx="212" ry="140" fill="#000" fill-opacity=".22"/>
-<ellipse cx="300" cy="238" rx="206" ry="134" fill="url(#p)"/>
-<ellipse cx="300" cy="238" rx="150" ry="94" fill="none" stroke="#e6d6c3" stroke-width="5"/>
-<text x="300" y="300" font-size="168" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">${emoji}</text>
-<circle cx="120" cy="96" r="7" fill="#fff" fill-opacity=".35"/><circle cx="500" cy="372" r="5" fill="#fff" fill-opacity=".3"/>
+<rect x="0" y="0" width="600" height="450" fill="${color}"/>
+<circle cx="306" cy="234" r="150" fill="#000" fill-opacity=".06"/>
+<circle cx="300" cy="225" r="150" fill="#FFFFFF"/>
+<circle cx="300" cy="225" r="112" fill="none" stroke="#000" stroke-opacity=".05" stroke-width="4"/>
+<text x="300" y="284" font-size="150" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">${emoji}</text>
 </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }

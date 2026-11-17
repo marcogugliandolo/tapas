@@ -1,9 +1,9 @@
 # Que Tapa!
 
-Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil y en el ordenador, en castellano y en gallego.
+Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil y en el ordenador, en castellano y en gallego. Mismo lenguaje que Xa Vén: interfaz neutra y limpia, y el color lo ponen las fotos; el pimentón solo marca subir y votar.
 
-- **El mapa con las fotos.** Cada bar con tapa hoy sale con la foto de su tapa. Las más votadas brillan y llevan su contador 🔥.
-- **«Hoy en Lugo».** Las tapas del día en un carrusel, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y el podio de las más votadas.
+- **El mapa con las fotos.** Cada bar con tapa hoy sale con la foto de su tapa y su contador de votos.
+- **«Hoy en Lugo».** Las tapas del día en fila, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y las tres más votadas.
 - **«¡Que tapa!».** Un voto por persona y día, sin cuentas.
 - **Sube tu tapa.** Cualquiera hace la foto de lo que le pusieron con la consumición. El móvil la reduce y le quita la ubicación antes de enviarla, y no sale hasta que se revisa.
 - **Panel del bar.** Cada bar dado de alta tiene un enlace privado: con él sube su tapa en 20 segundos, sale al momento con la marca «Foto del bar» y ve sus votos.

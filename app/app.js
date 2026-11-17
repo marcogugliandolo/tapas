@@ -12,15 +12,14 @@ const MAX_SIDE = 1280;
 const MINI_SIDE = 240;
 
 export const TIPOS = {
-  carne: ['🥩', 'Carne'],
-  mar: ['🦑', 'Del mar'],
-  cuchara: ['🥘', 'De cuchara'],
-  huevo: ['🍳', 'Huevo y tortilla'],
-  veggie: ['🥦', 'Vegetariana'],
-  'sin-gluten': ['🌾', 'Sin gluten'],
+  carne: 'Carne',
+  mar: 'Del mar',
+  cuchara: 'De cuchara',
+  huevo: 'Huevo y tortilla',
+  veggie: 'Vegetariana',
+  'sin-gluten': 'Sin gluten',
 };
 const IDEAS = ['Raxo', 'Callos', 'Tortilla', 'Pulpo', 'Zorza', 'Empanada', 'Croquetas', 'Oreja', 'Liscos', 'Calamares', 'Lacón', 'Pimientos'];
-const EMOJI_OF = { carne: '🥩', mar: '🦑', cuchara: '🥘', huevo: '🍳', veggie: '🥦', 'sin-gluten': '🌾' };
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -98,8 +97,7 @@ const isToday = (tapa) => tapa.fecha === state.fecha;
 const isNew = (tapa) => isToday(tapa) && Date.now() - Date.parse(tapa.at) < 2 * 3600000;
 const plural = (n, one, many) => (n === 1 ? t(one) : t(many, { n }));
 const src = (tapa, mini = false) => (tapa.img ? (mini ? tapa.mini ?? tapa.img : tapa.img) : `${API}/fotos/${tapa.foto}${mini ? '-m' : ''}.jpg`);
-const emojiFor = (tapa) => EMOJI_OF[tapa?.tipos?.[0]] ?? '🍢';
-const tipoLabel = (k) => `${TIPOS[k][0]} ${t(TIPOS[k][1])}`;
+const tipoLabel = (k) => t(TIPOS[k]);
 
 function distance(a, b) {
   const k = Math.cos((a.lat * Math.PI) / 180) * 111320;
@@ -233,7 +231,8 @@ function applyMapTheme() {
     if (!map.getLayer(id)) continue;
     for (const [key, value] of Object.entries(paint)) map.setPaintProperty(id, key, value);
   }
-  map.setPaintProperty('bares-dot', 'circle-stroke-color', isDark() ? '#1F1714' : '#FFFFFF');
+  map.setPaintProperty('bares-dot', 'circle-stroke-color', isDark() ? '#1B1F24' : '#FFFFFF');
+  map.setPaintProperty('bares-dot', 'circle-color', ['case', ['==', ['get', 'reg'], 1], '#E4472B', isDark() ? '#8A939B' : '#7C858D']);
 }
 
 async function buildStyle(remote) {
@@ -245,8 +244,8 @@ async function buildStyle(remote) {
   // Sin el mapa de fuera (sin conexión o bloqueado): las calles de Lugo, guardadas en la web.
   const streets = await fetch('data/streets.json').then((r) => r.json());
   themeTable = {
-    light: { bg: { 'background-color': '#F6EEE3' }, streets: { 'line-color': '#FFFFFF' } },
-    dark: { bg: { 'background-color': '#1A1512' }, streets: { 'line-color': '#3A2C25' } },
+    light: { bg: { 'background-color': '#E7E9E6' }, streets: { 'line-color': '#FFFFFF' } },
+    dark: { bg: { 'background-color': '#14171B' }, streets: { 'line-color': '#2A3037' } },
   };
   return {
     version: 8,
@@ -275,8 +274,8 @@ function addOverlays() {
     minzoom: 13.2,
     paint: {
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 13.2, 2.5, 15, ['case', ['==', ['get', 'reg'], 1], 6, 4.5], 18, ['case', ['==', ['get', 'reg'], 1], 9, 7]],
-      'circle-color': ['case', ['==', ['get', 'reg'], 1], '#F0431C', '#B08A70'],
-      'circle-stroke-color': isDark() ? '#1F1714' : '#FFFFFF',
+      'circle-color': ['case', ['==', ['get', 'reg'], 1], '#E4472B', isDark() ? '#8A939B' : '#7C858D'],
+      'circle-stroke-color': isDark() ? '#1B1F24' : '#FFFFFF',
       'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 13.2, 1, 16, 2],
     },
   });
@@ -363,7 +362,6 @@ function paintPin(entry, bar, tapa, rank) {
   const today = isToday(tapa);
   const sel = state.barId === bar.id && state.view === 'bar';
   el.classList.toggle('old', !today);
-  el.classList.toggle('hot', today && rank < 3 && tapa.fuegos > 0);
   el.classList.toggle('sel', sel);
   wrap.classList.toggle('sel', sel);
   wrap.classList.toggle('today', today);
@@ -372,7 +370,7 @@ function paintPin(entry, bar, tapa, rank) {
   if (img.getAttribute('src') !== want) img.src = want;
   const fl = el.querySelector('.fl');
   fl.hidden = !(today && tapa.fuegos > 0);
-  fl.textContent = `🔥${tapa.fuegos}`;
+  fl.innerHTML = `${FLAME}${tapa.fuegos}`;
   el.querySelector('.pin-name').textContent = bar.nombre;
   el.setAttribute('aria-label', `${tapa.nombre} · ${bar.nombre}`);
   entry.rank = (today ? 0 : 1000) + rank;
@@ -410,7 +408,7 @@ function updateMap() {
     if (!ghost) {
       const el = document.createElement('div');
       el.className = 'pin-wrap sel';
-      el.innerHTML = '<span class="pin ghost sel"><span class="ring"><span class="emo">🍢</span></span></span>';
+      el.innerHTML = '<span class="pin ghost sel"><span class="ring"><span class="emo"></span></span></span>';
       ghost = new maplibregl.Marker({ element: el, anchor: 'bottom' });
     }
     ghost.setLngLat([selected.lon, selected.lat]).addTo(map);
@@ -418,7 +416,7 @@ function updateMap() {
   if (state.me) {
     if (!mePin) {
       const el = document.createElement('div');
-      el.className = 'me-dot';
+      el.className = 'me';
       mePin = new maplibregl.Marker({ element: el });
     }
     mePin.setLngLat([state.me.lon, state.me.lat]).addTo(map);
@@ -459,13 +457,25 @@ function locate() {
 }
 
 /* ---------- Trocitos de las pantallas ---------- */
-const BACK_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>';
-const STAR = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"></path></svg>';
-const STAR_OFF = STAR.replace('fill="currentColor"', 'fill="none"');
-const SHARE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path></svg>';
-const PIN_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>';
-const SHIELD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6z"></path><path d="M9 12l2 2 4-4" stroke-linecap="round"></path></svg>';
-const BUBBLE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z"></path><path d="M12 8.5v3M12 13.8v.2" stroke-linecap="round"></path></svg>';
+const svg = (body, size = 20, extra = '') => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;
+const BACK_ICON = svg('<path d="M15 5l-7 7 7 7"></path>', 20);
+const STAR = svg('<path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"></path>', 20);
+const SHARE = svg('<path d="M12 15V3M7 8l5-5 5 5"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>', 20);
+const PIN_ICON = svg('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle>', 18);
+const SHIELD = svg('<path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6z"></path><path d="M9 12l2 2 4-4"></path>', 18);
+const BUBBLE = svg('<path d="M4 5h16v11H10l-5 4v-4H4z"></path><path d="M12 8.5v3M12 13.8v.2"></path>', 18);
+const CAMERA = svg('<path d="M4 8.5h3l1.8-2.5h6.4L17 8.5h3V19H4z"></path><circle cx="12" cy="13.2" r="3.4"></circle>', 20);
+const IMAGE = svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M20.5 16l-5-5L6 19.5"></path>', 20);
+const FLAME = svg('<path d="M12 21c-3.9 0-6.8-2.7-6.8-6.4 0-2.9 1.7-4.9 3.4-6.6.3 1.5 1.2 2.6 2.3 3C10.9 7.4 12.4 5 14.4 3.3c.2 2.6 1.6 4.4 2.8 5.9 1 1.2 1.6 2.6 1.6 4.4C18.8 18 15.8 21 12 21z"></path>', 18);
+const CHECK = svg('<path d="M5 12.5l4.2 4.2L19 7"></path>', 20);
+const STORE = svg('<path d="M4 10v10h16V10"></path><path d="M3 10l2-6h14l2 6"></path><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"></path><path d="M10 20v-5h4v5"></path>', 20);
+const GLASS = svg('<path d="M7 3h10l-1 7a4 4 0 0 1-8 0z"></path><path d="M12 14v7M8.5 21h7"></path>', 20);
+const INFO = svg('<circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.6v.2"></path>', 18);
+const LOCK = svg('<rect x="5" y="10.5" width="14" height="10" rx="2.5"></rect><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path>', 18);
+const PHONE = svg('<rect x="7" y="2.8" width="10" height="18.4" rx="2.5"></rect><path d="M11 18h2"></path>', 18);
+const CLOCK_ICON = svg('<circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path>', 18);
+const MAP_ICON = svg('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"></path><path d="M9 4v14M15 6v14"></path>', 20);
+const flame = (n) => `<span class="votes">${FLAME}${n}</span>`;
 
 const back = () => `<button type="button" class="back" data-act="back" aria-label="${t('Volver')}" title="${t('Volver')}">${BACK_ICON}</button>`;
 const privacyHref = () => (getLang() === 'gl' ? '/privacidade/' : '/privacidad/');
@@ -479,22 +489,22 @@ function langSwitch() {
   const lang = getLang();
   return `<div class="lang" role="group" aria-label="${t('Idioma')}"><button type="button" data-act="lang" data-lang="es" aria-pressed="${lang === 'es'}">Castellano</button><button type="button" data-act="lang" data-lang="gl" aria-pressed="${lang === 'gl'}">Galego</button></div>`;
 }
-const demoBanner = () => (DEMO ? `<p class="demo-banner"><span aria-hidden="true">🧪</span><span><b>${t('Modo de ejemplo.')}</b> ${t('Bares y tapas inventados para ver cómo queda. No se envía nada.')}</span></p>` : '');
+const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Bares y tapas inventados para ver cómo queda. No se envía nada.')}</span></p>` : '');
+const tip = (icon, text) => `<li><span class="tip-icon">${icon}</span><span>${text}</span></li>`;
+const nowCard = ({ act, to = '', bar = '', icon, label = '', title, sub = '', line = false }) => `<button type="button" class="now${line ? ' line' : ''}" data-act="${act}"${to !== '' ? ` data-to="${esc(to)}"` : ''}${bar ? ` data-bar="${esc(bar)}"` : ''}><span class="now-icon">${icon}</span><span class="now-text">${label ? `<span class="now-label">${label}</span>` : ''}<strong>${title}</strong>${sub ? `<small>${sub}</small>` : ''}</span><span class="now-go" aria-hidden="true">›</span></button>`;
 
 function card(tapa) {
   const bar = state.barById.get(tapa.bar);
   return `<button type="button" class="card${isToday(tapa) ? '' : ' old'}" data-act="open-tapa" data-bar="${esc(tapa.bar)}" data-tapa="${esc(tapa.id)}">
-    <img src="${esc(src(tapa))}" alt="" loading="lazy" decoding="async">
-    ${isNew(tapa) ? `<span class="new">${t('Nueva')}</span>` : ''}
-    ${tapa.fuegos ? `<span class="flame">🔥 ${tapa.fuegos}</span>` : ''}
-    <span class="txt"><strong>${esc(tapa.nombre)}</strong><small>${esc(bar?.nombre ?? '')} · ${esc(ago(tapa))}</small></span></button>`;
+    <span class="ph"><img src="${esc(src(tapa))}" alt="" loading="lazy" decoding="async">${isNew(tapa) ? `<span class="new">${t('Nueva')}</span>` : ''}${tapa.fuegos ? flame(tapa.fuegos) : ''}</span>
+    <strong>${esc(tapa.nombre)}</strong><small>${esc(bar?.nombre ?? '')} · ${esc(ago(tapa))}</small></button>`;
 }
 
 function barRow(bar, extra = '') {
   const tapa = state.latest.get(bar.id);
-  const thumb = tapa ? `<img class="thumb" src="${esc(src(tapa, true))}" alt="" loading="lazy">` : '<span class="thumb" aria-hidden="true">🍷</span>';
+  const thumb = tapa ? `<img class="thumb" src="${esc(src(tapa, true))}" alt="" loading="lazy">` : `<span class="thumb">${GLASS}</span>`;
   const sub = tapa ? `${isToday(tapa) ? t('Hoy') : esc(ago(tapa))}: ${esc(tapa.nombre)}` : (bar.dir ? esc(bar.dir) : t('Aún sin tapa hoy'));
-  return `<button type="button" class="row" data-act="open-bar" data-bar="${esc(bar.id)}">${thumb}<span class="to"><strong>${esc(bar.nombre)}</strong><small>${sub}${extra}</small></span><span class="go" aria-hidden="true">›</span></button>`;
+  return `<button type="button" class="row" data-act="open-bar" data-bar="${esc(bar.id)}">${thumb}<span class="to"><strong>${esc(bar.nombre)}</strong><small>${sub}${extra}</small></span><span class="more" aria-hidden="true">›</span></button>`;
 }
 
 function filtered(list) {
@@ -509,26 +519,25 @@ function homeHTML() {
   const older = state.tapas.filter((x) => !isToday(x));
   const list = filtered(today);
   const counts = Object.fromEntries(Object.keys(TIPOS).map((k) => [k, today.filter((x) => x.tipos?.includes(k)).length]));
-  const chip = (key, label, n, cls = '') => `<button type="button" class="chip ${cls}" data-act="filter" data-filter="${key}" aria-pressed="${state.filter === key}">${label}${n ? ` <span class="n">${n}</span>` : ''}</button>`;
-  const chips = today.length ? `<div class="chips" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), today.length)}${chip('top', `🔥 ${t('Las mejores')}`, 0, 'fire')}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
+  const chip = (key, label, n) => `<button type="button" data-act="filter" data-filter="${key}" aria-pressed="${state.filter === key}">${label}${n ? ` <span class="n">${n}</span>` : ''}</button>`;
+  const filters = today.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), 0)}${chip('top', t('Las más votadas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
 
-  const title = `<p class="eyebrow"><img src="icon.svg" width="26" height="26" alt=""><b>Que Tapa!</b><span>${t('As tapas de Lugo')}</span></p>
-    <div class="head"><div><h1 class="mega">${t('Hoy en')} <em>Lugo</em></h1><small>${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa con foto', '{n} tapas con foto')}` : ''}</small></div></div>`;
+  const sub = `${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa', '{n} tapas')}` : ''}`;
+  const title = `<p class="eyebrow"><img src="icon.svg" width="22" height="22" alt=""><span>Que Tapa!</span> ${t('Las tapas de Lugo')}</p>
+    <div class="head"><div><h1>${t('Hoy en Lugo')}</h1><small>${sub}</small></div></div>`;
 
   let main;
-  if (!state.loaded) {
-    main = `<p class="note">${t('Cargando las tapas de hoy…')}</p>`;
-  } else if (!today.length) {
-    main = `<div class="empty"><span class="plate" aria-hidden="true">🍢</span><strong>${t('Aún no hay tapas hoy')}</strong><p>${t('¿Estás de viños? Hazle una foto a la tapa que te pongan y sé el primero del día.')}</p>
-      <button type="button" class="cta fire" data-act="upload">📸 ${t('Subir una tapa')}</button></div>`;
+  if (!state.loaded) main = `<p class="empty">${t('Cargando las tapas de hoy…')}</p>`;
+  else if (!today.length) {
+    main = `<div class="ride-hero"><strong class="big-line">${t('Aún no hay tapas hoy')}</strong><small>${t('¿Estás de viños? Hazle una foto a la tapa que te pongan y sé el primero del día.')}</small></div>
+      <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
   } else {
-    main = `${chips}<div class="reel">${list.length ? list.map(card).join('') : ''}</div>${list.length ? '' : `<p class="note">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}`;
+    main = `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}`;
   }
 
-  const ranked = [...today].sort((a, b) => b.fuegos - a.fuegos || a.at.localeCompare(b.at)).filter((x) => x.fuegos > 0).slice(0, 3);
-  const medals = ['🥇', '🥈', '🥉'];
-  const podium = ranked.length ? `<section class="rows"><h2 class="section-title">${t('Lo más deseado hoy')}<small>${t('votos de la gente')}</small></h2>
-    ${ranked.map((x, i) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="medal" aria-hidden="true">${medals[i]}</span><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')}</small></span><span class="score">🔥 ${x.fuegos}</span></button>`).join('')}</section>` : '';
+  const ranked = [...today].filter((x) => x.fuegos > 0).sort((a, b) => b.fuegos - a.fuegos || a.at.localeCompare(b.at)).slice(0, 3);
+  const podium = ranked.length ? `<section class="rows"><h2>${t('Las más votadas hoy')}</h2>
+    ${ranked.map((x, i) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="rank${i === 0 ? ' first' : ''}">${i + 1}</span><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')}</small></span><span class="score">${FLAME}${x.fuegos}</span></button>`).join('')}</section>` : '';
 
   const near = state.me ? (() => {
     const bars = state.bares.map((b) => ({ b, d: distance(state.me, b) })).filter((x) => x.d < 1500).sort((a, b) => {
@@ -536,24 +545,20 @@ function homeHTML() {
       const tb = state.latest.get(b.b.id);
       return (tb && isToday(tb) ? 1 : 0) - (ta && isToday(ta) ? 1 : 0) || a.d - b.d;
     }).slice(0, 5);
-    return bars.length ? `<section class="rows"><h2 class="section-title">${t('Cerca de ti')}</h2>${bars.map(({ b, d }) => barRow(b, ` · ${distanceText(d)}`)).join('')}</section>` : '';
+    return bars.length ? `<section class="rows"><h2>${t('Cerca de ti')}</h2>${bars.map(({ b, d }) => barRow(b, ` · ${distanceText(d)}`)).join('')}</section>` : '';
   })() : '';
 
   const favBars = state.favs.map((id) => state.barById.get(id)).filter(Boolean);
-  const favs = favBars.length ? `<section class="rows"><h2 class="section-title">${t('Tus bares')}</h2>${favBars.map((b) => barRow(b)).join('')}</section>` : '';
+  const favs = favBars.length ? `<section class="rows"><h2>${t('Tus bares')}</h2>${favBars.map((b) => barRow(b)).join('')}</section>` : '';
 
-  const myBar = state.mine ? `<button type="button" class="row" data-act="go" data-to="panel"><span class="thumb" aria-hidden="true">🏪</span><span class="to"><strong>${t('Tu bar')}: ${esc(state.barById.get(state.mine.bar)?.nombre ?? state.mine.nombre ?? '')}</strong><small>${t('Sube la tapa de hoy y mira tus votos')}</small></span><span class="go" aria-hidden="true">›</span></button>` : '';
+  const myBar = state.mine ? nowCard({ act: 'go', to: 'panel', icon: STORE, label: t('Tu bar'), title: esc(state.barById.get(state.mine.bar)?.nombre ?? state.mine.nombre ?? ''), sub: t('Sube la tapa de hoy y mira tus votos') }) : '';
+  const promo = state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
 
-  const promo = state.mine ? '' : `<section class="promo"><span class="big-emoji" aria-hidden="true">🍷</span><h2>${t('¿Tienes un bar?')}</h2><p>${t('Pon tu tapa del día en el mapa: una foto y listo. Gratis, sin apps ni cuentas.')}</p>
-    <button type="button" class="cta" data-act="go" data-to="alta">${t('Quiero salir en el mapa')}</button></section>`;
-
-  const lastDays = older.length && today.length < 6 ? `<section><h2 class="section-title">${t('Estos días')}<small>${t('para hacerse una idea')}</small></h2></section><div class="reel">${older.slice(0, 12).map(card).join('')}</div>` : '';
-
-  const offline = state.offline ? `<p class="demo-banner"><span aria-hidden="true">📡</span><span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
+  const lastDays = older.length && today.length < 6 ? `<section class="section"><h2>${t('Estos días')}</h2><div class="reel">${older.slice(0, 12).map(card).join('')}</div></section>` : '';
+  const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
   return `${title}${demoBanner()}${offline}${myBar}${main}${podium}${near}${favs}${lastDays}${promo}
-    <ul class="tips"><li><span aria-hidden="true">🔥</span>${t('Pulsa «¡Que tapa!» en las que te gusten: las más votadas brillan en el mapa.')}</li>
-    <li><span aria-hidden="true">⭐</span>${t('Guarda tus bares con la estrella y los verás aquí al abrir.')}</li></ul>
+    <ul class="tips">${tip(FLAME, t('Pulsa «¡Que tapa!» en las que te gusten: las más votadas salen arriba.'))}${state.favs.length ? '' : tip(STAR, t('Guarda tus bares con la estrella y los verás aquí al abrir.'))}</ul>
     ${langSwitch()}${foot()}`;
 }
 
@@ -566,38 +571,38 @@ function barHTML() {
   const fav = state.favs.includes(bar.id);
   const owner = state.mine?.bar === bar.id;
 
-  const headHTML = `<div class="head">${back()}<div><h1>${esc(bar.nombre)}</h1><small>${bar.reg ? `✔ ${t('El bar sube sus tapas')}` : esc(bar.dir || t('Bar de Lugo'))}</small></div>
-    <button type="button" class="icon-btn${fav ? ' on' : ''}" data-act="fav" aria-pressed="${fav}" aria-label="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}" title="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}">${fav ? STAR : STAR_OFF}</button>
+  const headHTML = `<div class="head">${back()}<div><h1>${esc(bar.nombre)}</h1><small>${bar.reg ? t('El bar sube sus tapas') : esc(bar.dir || t('Bar de Lugo'))}</small></div>
+    <button type="button" class="icon-btn${fav ? ' on' : ''}" data-act="fav" aria-pressed="${fav}" aria-label="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}" title="${fav ? t('Quitar de tus bares') : t('Guardar en tus bares')}">${STAR}</button>
     <button type="button" class="icon-btn" data-act="share" aria-label="${t('Compartir')}" title="${t('Compartir')}">${SHARE}</button></div>`;
 
   let body;
   if (tapa) {
     const voted = Boolean(state.fuegos[tapa.id]);
     const tags = [
-      isToday(tapa) ? `<span class="tag today">${t('Hoy')} · ${esc(ago(tapa))}</span>` : `<span class="tag">${esc(ago(tapa))}</span>`,
-      tapa.autor === 'bar' ? `<span class="tag verified">✔ ${t('Foto del bar')}</span>` : `<span class="tag">📸 ${t('Foto de un cliente')}</span>`,
+      isToday(tapa) ? `<span class="tag today">${t('Hoy')} · ${esc(ago(tapa))}</span>` : `<span class="tag">${CLOCK_ICON}${esc(ago(tapa))}</span>`,
+      tapa.autor === 'bar' ? `<span class="tag">${CHECK}${t('Foto del bar')}</span>` : `<span class="tag">${t('Foto de un cliente')}</span>`,
     ].join('');
-    body = `<div class="hero"><img src="${esc(src(tapa))}" alt="${esc(tapa.nombre)}"><div class="tags">${tags}</div></div>
-      <h2 class="tapa-name">${esc(tapa.nombre)}</h2>
-      ${tapa.tipos?.length ? `<div class="tipos">${tapa.tipos.filter((k) => TIPOS[k]).map((k) => `<span class="tipo">${tipoLabel(k)}</span>`).join('')}</div>` : ''}
+    const tipos = (tapa.tipos ?? []).filter((k) => TIPOS[k]).map(tipoLabel).join(' · ');
+    body = `<div class="photo"><img src="${esc(src(tapa))}" alt="${esc(tapa.nombre)}"><div class="tags">${tags}</div></div>
+      <div class="tapa-meta"><h2 class="big-line">${esc(tapa.nombre)}</h2>${tipos ? `<small>${esc(tipos)}</small>` : ''}</div>
       ${tapa.nota ? `<p class="nota">${esc(tapa.nota)}</p>` : ''}
-      ${isToday(tapa) ? `<button type="button" class="fuego${voted ? ' done' : ''}" data-act="fuego" data-tapa="${esc(tapa.id)}">${voted ? `🔥 ${t('¡Votada!')}` : `🔥 ${t('¡Que tapa!')}`}<span class="count">${tapa.fuegos}</span></button>`
+      ${isToday(tapa) ? `<button type="button" class="vote${voted ? ' on' : ''}" data-act="fuego" data-tapa="${esc(tapa.id)}" aria-pressed="${voted}">${FLAME}<span>${voted ? t('¡Votada!') : t('¡Que tapa!')}</span><span class="sep"></span><b>${tapa.fuegos}</b></button>`
         : `<p class="note">${t('Esta es la última que vimos. ¿Vas hoy? Sube la de hoy y aparecerá aquí.')}</p>`}`;
   } else {
-    body = `<div class="hero none"><div><span aria-hidden="true">🍢</span><strong>${t('Aún no sabemos qué tapa ponen')}</strong><p>${t('Si estás allí, hazle una foto y sé el primero.')}</p></div></div>`;
+    body = `<div class="photo none"><div>${CAMERA}<strong>${t('Aún no sabemos qué tapa ponen')}</strong><span>${t('Si estás allí, hazle una foto y sé el primero.')}</span></div></div>`;
   }
 
   const actions = `<div class="buttons">
-    <button type="button" class="cta ${tapa && isToday(tapa) ? 'second' : 'fire'}" data-act="upload" data-bar="${esc(bar.id)}">📸 ${owner ? t('Subir la tapa de hoy') : t('Subir la de hoy')}</button>
+    <button type="button" class="cta ${tapa && isToday(tapa) ? 'second' : 'brand-btn'}" data-act="upload" data-bar="${esc(bar.id)}">${CAMERA}${owner ? t('Subir la tapa de hoy') : t('Subir la de hoy')}</button>
     <a class="cta second" href="https://www.google.com/maps/dir/?api=1&amp;destination=${bar.lat},${bar.lon}" target="_blank" rel="noopener">${PIN_ICON}${t('Cómo llegar')}</a></div>
-    ${bar.dir ? `<p class="addr">${PIN_ICON}<span>${esc(bar.dir)}${state.me ? ` · ${distanceText(distance(state.me, bar))}` : ''}${bar.insta ? ` · <a href="https://instagram.com/${esc(bar.insta)}" target="_blank" rel="noopener">@${esc(bar.insta)}</a>` : ''}</span></p>` : ''}`;
+    ${bar.dir || bar.insta ? `<p class="addr">${PIN_ICON}<span>${esc(bar.dir || '')}${state.me ? ` · ${distanceText(distance(state.me, bar))}` : ''}${bar.insta ? `${bar.dir ? ' · ' : ''}<a href="https://instagram.com/${esc(bar.insta)}" target="_blank" rel="noopener">@${esc(bar.insta)}</a>` : ''}</span></p>` : ''}`;
 
-  const grid = history.length > 1 ? `<section class="form"><h2 class="section-title">${t('Otras tapas de aquí')}<small>${plural(history.length, '1 foto', '{n} fotos')}</small></h2>
-    <div class="grid">${history.slice(0, 24).map((x) => `<button type="button" data-act="pick-tapa" data-tapa="${esc(x.id)}" aria-current="${x.id === tapa?.id}" aria-label="${esc(x.nombre)}"><img src="${esc(src(x, true))}" alt="" loading="lazy"><small>${esc(isToday(x) ? t('Hoy') : shortDate(x.fecha))}</small></button>`).join('')}</div></section>` : '';
+  const grid = history.length > 1 ? `<section class="section"><h2>${t('Otras tapas de aquí')}</h2>
+    <div class="grid">${history.slice(0, 24).map((x) => `<button type="button" data-act="pick-tapa" data-tapa="${esc(x.id)}" aria-current="${x.id === tapa?.id}" aria-label="${esc(x.nombre)} · ${esc(isToday(x) ? t('Hoy') : shortDate(x.fecha))}"><img src="${esc(src(x, true))}" alt="" loading="lazy"></button>`).join('')}</div></section>` : '';
 
-  const claim = !bar.reg && !owner ? `<div class="claim"><span aria-hidden="true">🏪</span><div><strong>${t('¿Es tu bar?')}</strong><p>${t('Sube tú la tapa cada día y sal destacado en el mapa. Gratis.')}</p><button type="button" class="cta second" data-act="go" data-to="alta/${esc(bar.id)}">${t('Dar de alta mi bar')}</button></div></div>` : '';
+  const claim = !bar.reg && !owner ? nowCard({ act: 'go', to: `alta/${bar.id}`, icon: STORE, title: t('¿Es tu bar?'), sub: t('Sube tú la tapa cada día y sal destacado en el mapa. Gratis.'), line: true }) : '';
 
-  return `${headHTML}${demoBanner()}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
+  return `${headHTML}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
 }
 const shortDate = (fecha) => { const d = new Date(`${fecha}T12:00:00Z`); return `${d.getUTCDate()} ${MESES[getLang()][d.getUTCMonth()].slice(0, 3)}`; };
 
@@ -611,16 +616,16 @@ function searchResults(q) {
   if (!q) {
     const favBars = state.favs.map((id) => state.barById.get(id)).filter(Boolean);
     const withTapa = state.bares.filter((b) => state.latest.has(b.id) && isToday(state.latest.get(b.id))).slice(0, 12);
-    return `<div class="rows">${favBars.length ? `<h2 class="section-title">${t('Tus bares')}</h2>${favBars.map((b) => barRow(b)).join('')}` : ''}
-      ${withTapa.length ? `<h2 class="section-title">${t('Con tapa hoy')}</h2>${withTapa.map((b) => barRow(b)).join('')}` : `<p class="note">${t('Escribe el nombre de un bar o de una tapa: raxo, callos, tortilla…')}</p>`}</div>`;
+    return `${favBars.length ? `<section class="rows"><h2>${t('Tus bares')}</h2>${favBars.map((b) => barRow(b)).join('')}</section>` : ''}
+      ${withTapa.length ? `<section class="rows"><h2>${t('Con tapa hoy')}</h2>${withTapa.map((b) => barRow(b)).join('')}</section>` : `<p class="empty">${t('Escribe el nombre de un bar o de una tapa: raxo, callos, tortilla…')}</p>`}`;
   }
   const words = q.split(/\s+/);
   const match = (s) => { const n = norm(s); return words.every((w) => n.includes(w)); };
   const tapas = state.tapas.filter((x) => match(x.nombre)).sort((a, b) => (isToday(b) - isToday(a)) || b.fuegos - a.fuegos).slice(0, 12);
   const bars = state.bares.filter((b) => match(`${b.nombre} ${b.dir}`)).sort((a, b) => (state.latest.has(b.id) - state.latest.has(a.id)) || a.nombre.localeCompare(b.nombre)).slice(0, 25);
-  if (!tapas.length && !bars.length) return `<p class="note">${t('No encontramos nada con «{q}».', { q: esc(state.query.trim()) })}</p>`;
-  return `<div class="rows">${tapas.length ? `<h2 class="section-title">${t('Tapas')}</h2>${tapas.map((x) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')} · ${esc(ago(x))}</small></span>${x.fuegos ? `<span class="score">🔥 ${x.fuegos}</span>` : ''}</button>`).join('')}` : ''}
-    ${bars.length ? `<h2 class="section-title">${t('Bares')}</h2>${bars.map((b) => barRow(b)).join('')}` : ''}</div>`;
+  if (!tapas.length && !bars.length) return `<p class="empty">${t('No encontramos nada con «{q}».', { q: esc(state.query.trim()) })}</p>`;
+  return `${tapas.length ? `<section class="rows"><h2>${t('Tapas')}</h2>${tapas.map((x) => `<button type="button" class="row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><img class="thumb" src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(state.barById.get(x.bar)?.nombre ?? '')} · ${esc(ago(x))}</small></span>${x.fuegos ? `<span class="score">${FLAME}${x.fuegos}</span>` : ''}</button>`).join('')}</section>` : ''}
+    ${bars.length ? `<section class="rows"><h2>${t('Bares')}</h2>${bars.map((b) => barRow(b)).join('')}</section>` : ''}`;
 }
 
 /* ---------- Subir una tapa ---------- */
@@ -631,9 +636,9 @@ function uploadHTML() {
   const head = `<div class="head">${back()}<div><h1>${owner ? t('La tapa de hoy') : t('Sube una tapa')}</h1><small>${owner ? t('Sale en el mapa al momento') : t('La foto de lo que te pusieron con la consumición')}</small></div></div>`;
 
   if (up.done) {
-    return `${head}<div class="ok-box"><span class="big" aria-hidden="true">${owner ? '🔥' : '🙌'}</span><strong>${owner ? t('¡Ya está en el mapa!') : t('¡Gracias!')}</strong>
-      <p>${owner ? t('Comparte el enlace de tu bar en tus redes para que la vean.') : t('La miramos en un momento y sale en el mapa. Así nadie sube cosas raras.')}</p></div>
-      <div class="buttons">${owner ? `<button type="button" class="cta fire" data-act="share-bar" data-bar="${esc(bar.id)}">${SHARE}${t('Compartir mi bar')}</button>` : ''}
+    return `${head}<div class="ride-hero"><span class="ok-icon">${CHECK}</span><strong class="big-line">${owner ? t('¡Ya está en el mapa!') : t('¡Gracias!')}</strong>
+      <small>${owner ? t('Comparte el enlace de tu bar en tus redes para que la vean.') : t('La miramos en un momento y sale en el mapa. Así nadie sube cosas raras.')}</small></div>
+      <div class="buttons">${owner ? `<button type="button" class="cta brand-btn" data-act="share-bar" data-bar="${esc(bar.id)}">${SHARE}${t('Compartir mi bar')}</button>` : ''}
       <button type="button" class="cta second" data-act="go" data-to="${owner ? 'panel' : ''}">${owner ? t('Volver a tu bar') : t('Volver al mapa')}</button></div>`;
   }
 
@@ -644,28 +649,28 @@ function uploadHTML() {
     if (state.me) list = [...list].sort((a, b) => distance(state.me, a) - distance(state.me, b));
     else if (!q) list = [...list].sort((a, b) => (state.latest.has(b.id) - state.latest.has(a.id)) || a.nombre.localeCompare(b.nombre));
     list = list.slice(0, 20);
-    return `${head}<div class="form"><h2 class="section-title">${t('¿En qué bar estás?')}</h2>
-      ${state.me ? '' : `<button type="button" class="cta fire" data-act="locate">📍 ${t('Buscar los bares de aquí al lado')}</button>`}
-      <label class="field"><span>${t('O búscalo por el nombre')}</span><input id="up-q" type="search" value="${esc(up.q ?? '')}" placeholder="${t('Nombre del bar')}" autocomplete="off"></label>
-      <div class="rows">${list.map((b) => `<button type="button" class="row" data-act="up-bar" data-bar="${esc(b.id)}"><span class="thumb" aria-hidden="true">${state.latest.has(b.id) ? '🍢' : '🍷'}</span><span class="to"><strong>${esc(b.nombre)}</strong><small>${esc(b.dir || '')}${state.me ? `${b.dir ? ' · ' : ''}${distanceText(distance(state.me, b))}` : ''}</small></span><span class="go" aria-hidden="true">›</span></button>`).join('') || `<p class="note">${t('No aparece. Si es tu bar, puedes darlo de alta.')}</p>`}</div>
-      <button type="button" class="cta second" data-act="go" data-to="alta">${t('Mi bar no está en la lista')}</button></div>`;
+    return `${head}<div class="form">
+      ${state.me ? '' : `<button type="button" class="cta second" data-act="locate">${PIN_ICON}${t('Buscar los bares de aquí al lado')}</button>`}
+      <label class="field"><span>${t('¿En qué bar estás?')}</span><input id="up-q" type="search" value="${esc(up.q ?? '')}" placeholder="${t('Nombre del bar')}" autocomplete="off"></label>
+      <div class="rows">${list.map((b) => `<button type="button" class="row" data-act="up-bar" data-bar="${esc(b.id)}"><span class="thumb">${GLASS}</span><span class="to"><strong>${esc(b.nombre)}</strong><small>${esc(b.dir || '')}${state.me ? `${b.dir ? ' · ' : ''}${distanceText(distance(state.me, b))}` : ''}</small></span><span class="more" aria-hidden="true">›</span></button>`).join('') || `<p class="empty">${t('No aparece. Si es tu bar, puedes darlo de alta.')}</p>`}</div>
+      <button type="button" class="ghost" data-act="go" data-to="alta">${t('Mi bar no está en la lista')}</button></div>`;
   }
 
-  const picked = `<div class="picked"><span aria-hidden="true">📍</span><div><strong>${esc(bar.nombre)}</strong><small>${esc(bar.dir || t('Lugo'))}</small></div>${owner ? '' : `<button type="button" data-act="up-change">${t('Cambiar')}</button>`}</div>`;
+  const picked = `<div class="now picked"><span class="now-icon">${PIN_ICON}</span><span class="now-text"><strong>${esc(bar.nombre)}</strong><small>${esc(bar.dir || t('Lugo'))}</small></span>${owner ? '' : `<button type="button" class="ghost" data-act="up-change">${t('Cambiar')}</button>`}</div>`;
   const photo = up.photo
     ? `<div class="preview"><img src="${esc(up.photo.url)}" alt=""><button type="button" data-act="pick-gallery">${t('Cambiar la foto')}</button></div>`
-    : `<div class="picker"><button type="button" class="main" data-act="pick-camera"><span aria-hidden="true">📸</span>${t('Hacer la foto')}</button><button type="button" data-act="pick-gallery"><span aria-hidden="true">🖼️</span>${t('Elegir de la galería')}</button></div>
+    : `<div class="picker"><button type="button" class="main" data-act="pick-camera">${CAMERA}${t('Hacer la foto')}</button><button type="button" data-act="pick-gallery">${IMAGE}${t('Elegir de la galería')}</button></div>
       ${up.processing ? `<p class="note">${t('Preparando la foto…')}</p>` : ''}`;
-  const tipos = Object.keys(TIPOS).map((k) => `<button type="button" class="chip" data-act="up-tipo" data-tipo="${k}" aria-pressed="${up.tipos.includes(k)}">${tipoLabel(k)}</button>`).join('');
+  const tipos = Object.keys(TIPOS).map((k) => `<button type="button" data-act="up-tipo" data-tipo="${k}" aria-pressed="${up.tipos.includes(k)}">${tipoLabel(k)}</button>`).join('');
   const ready = up.photo && up.nombre.trim().length >= 2 && !up.sending;
   return `${head}${demoBanner()}<div class="form">${picked}${photo}
     <label class="field"><span>${t('¿Qué tapa es?')}</span><input id="up-nombre" value="${esc(up.nombre)}" maxlength="60" placeholder="${t('Raxo con patatas, callos, tortilla…')}" autocomplete="off" enterkeyhint="done"></label>
-    <div class="ideas">${IDEAS.map((x) => `<button type="button" data-act="up-idea" data-idea="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-    <div class="field"><span>${t('¿De qué es? (opcional)')}</span><div class="toggles">${tipos}</div></div>
-    ${owner ? `<label class="field"><span>${t('Una nota (opcional)')}</span><input id="up-nota" value="${esc(up.nota)}" maxlength="80" placeholder="${t('Hasta las 15:00 · Solo con vino')}" autocomplete="off"><small>${t('Sale debajo de la foto.')}</small></label>` : ''}
+    <div class="chips small">${IDEAS.map((x) => `<button type="button" data-act="up-idea" data-idea="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    <div class="field"><span>${t('¿De qué es?')} <small>${t('(si quieres)')}</small></span><div class="chips">${tipos}</div></div>
+    ${owner ? `<label class="field"><span>${t('Una nota')} <small>${t('(si quieres)')}</small></span><input id="up-nota" value="${esc(up.nota)}" maxlength="80" placeholder="${t('Hasta las 15:00 · Solo con vino')}" autocomplete="off"><small>${t('Sale debajo de la foto.')}</small></label>` : ''}
     <label class="trap" aria-hidden="true">Web <input id="up-web" tabindex="-1" autocomplete="off"></label>
-    <button type="button" class="cta fire" data-act="up-send" ${ready ? '' : 'disabled'}>${up.sending ? t('Subiendo…') : owner ? `🔥 ${t('Publicar ya')}` : `🚀 ${t('Enviar')}`}</button>
-    <p class="note">${owner ? t('Solo tú tienes este enlace: lo que subas sale con la marca «Foto del bar».') : t('Antes de salir la revisamos. No necesitas cuenta y no guardamos quién eres; la foto se envía sin la ubicación ni los datos del móvil.')}</p></div>`;
+    <button type="button" class="cta brand-btn" data-act="up-send" ${ready ? '' : 'disabled'}>${up.sending ? t('Subiendo…') : owner ? t('Publicar ya') : t('Enviar')}</button>
+    <p class="foot">${owner ? t('Solo tú tienes este enlace: lo que subas sale con la marca «Foto del bar».') : t('Antes de salir la revisamos. No necesitas cuenta y no guardamos quién eres; la foto se envía sin la ubicación ni los datos del móvil.')}</p></div>`;
 }
 
 /* ---------- Alta de un bar ---------- */
@@ -673,57 +678,57 @@ function altaHTML() {
   const a = state.alta;
   const head = `<div class="head">${back()}<div><h1>${t('Pon tu bar en el mapa')}</h1><small>${t('Gratis, sin apps ni cuentas')}</small></div></div>`;
   if (a.sent) {
-    return `${head}<div class="ok-box"><span class="big" aria-hidden="true">🎉</span><strong>${t('¡Recibido!')}</strong><p>${t('Te mandamos el enlace privado de tu bar en cuanto lo revisemos, normalmente el mismo día.')}</p></div>
+    return `${head}<div class="ride-hero"><span class="ok-icon">${CHECK}</span><strong class="big-line">${t('¡Recibido!')}</strong><small>${t('Te mandamos el enlace privado de tu bar en cuanto lo revisemos, normalmente el mismo día.')}</small></div>
       <button type="button" class="cta second" data-act="go" data-to="">${t('Volver al mapa')}</button>`;
   }
   if (a.aiming) {
     return `<div class="head"><div><h1>${t('¿Dónde está tu bar?')}</h1><small>${t('Mueve el mapa hasta que la chincheta quede encima.')}</small></div></div>
-      <div class="buttons"><button type="button" class="cta fire" data-act="aim-ok">${t('Es aquí')}</button><button type="button" class="cta second" data-act="aim-cancel">${t('Cancelar')}</button></div>`;
+      <div class="buttons"><button type="button" class="cta brand-btn" data-act="aim-ok">${t('Es aquí')}</button><button type="button" class="cta second" data-act="aim-cancel">${t('Cancelar')}</button></div>`;
   }
   const located = Number.isFinite(a.lat);
   const where = a.osm
-    ? `<div class="picked"><span aria-hidden="true">📍</span><div><strong>${esc(a.nombre)}</strong><small>${t('Ya está en el mapa: usamos su sitio.')}</small></div></div>`
-    : `<div class="field"><span>${t('¿Dónde está?')}</span>${located ? `<div class="picked"><span aria-hidden="true">✅</span><div><strong>${t('Sitio marcado')}</strong><small>${a.lat.toFixed(5)}, ${a.lon.toFixed(5)}</small></div><button type="button" data-act="aim">${t('Cambiar')}</button></div>`
-      : `<div class="buttons"><button type="button" class="cta second" data-act="alta-here">📍 ${t('Estoy en el bar')}</button><button type="button" class="cta second" data-act="aim">🗺️ ${t('Lo marco en el mapa')}</button></div>`}</div>`;
+    ? `<div class="now"><span class="now-icon">${PIN_ICON}</span><span class="now-text"><strong>${esc(a.nombre)}</strong><small>${t('Ya está en el mapa: usamos su sitio.')}</small></span></div>`
+    : `<div class="field"><span>${t('¿Dónde está?')}</span>${located ? `<div class="now picked"><span class="now-icon">${CHECK}</span><span class="now-text"><strong>${t('Sitio marcado')}</strong><small>${a.lat.toFixed(5)}, ${a.lon.toFixed(5)}</small></span><button type="button" class="ghost" data-act="aim">${t('Cambiar')}</button></div>`
+      : `<div class="buttons"><button type="button" class="cta second" data-act="alta-here">${PIN_ICON}${t('Estoy en el bar')}</button><button type="button" class="cta second" data-act="aim">${MAP_ICON}${t('Lo marco en el mapa')}</button></div>`}</div>`;
   const ready = a.nombre.trim().length >= 2 && a.contacto.trim().length >= 5 && located && !a.sending;
-  return `${head}${demoBanner()}<ul class="perks">
-      <li><span aria-hidden="true">📸</span>${t('Subes tu tapa del día en 20 segundos desde el móvil del bar.')}</li>
-      <li><span aria-hidden="true">🔥</span>${t('La gente la vota y las mejores brillan en el mapa.')}</li>
-      <li><span aria-hidden="true">✔</span>${t('Tu bar sale destacado y tus fotos llevan la marca «Foto del bar».')}</li></ul>
+  return `${head}${demoBanner()}<ul class="tips">
+      ${tip(CAMERA, t('Subes tu tapa del día en 20 segundos desde el móvil del bar.'))}
+      ${tip(FLAME, t('La gente la vota y las más votadas salen arriba.'))}
+      ${tip(CHECK, t('Tus fotos llevan la marca «Foto del bar».'))}</ul>
     <div class="form">
     ${a.osm ? where : `<label class="field"><span>${t('Nombre del bar')}</span><input id="al-nombre" value="${esc(a.nombre)}" maxlength="60" autocomplete="organization"></label>
       <label class="field"><span>${t('Dirección')}</span><input id="al-dir" value="${esc(a.dir)}" maxlength="100" placeholder="${t('Rúa Nova, 12')}" autocomplete="street-address"></label>${where}`}
     <label class="field"><span>${t('Teléfono o email')}</span><input id="al-contacto" value="${esc(a.contacto)}" maxlength="120" inputmode="email" autocomplete="tel"><small>${t('Solo para mandarte el enlace de tu bar. No sale en ningún sitio.')}</small></label>
-    <label class="field"><span>${t('Instagram del bar (opcional)')}</span><input id="al-insta" value="${esc(a.insta)}" maxlength="40" placeholder="@tubar" autocomplete="off"></label>
-    <label class="field"><span>${t('¿Algo más? (opcional)')}</span><textarea id="al-mensaje" maxlength="400">${esc(a.mensaje)}</textarea></label>
+    <label class="field"><span>${t('Instagram del bar')} <small>${t('(si quieres)')}</small></span><input id="al-insta" value="${esc(a.insta)}" maxlength="40" placeholder="@tubar" autocomplete="off"></label>
+    <label class="field"><span>${t('¿Algo más?')} <small>${t('(si quieres)')}</small></span><textarea id="al-mensaje" maxlength="400" rows="3">${esc(a.mensaje)}</textarea></label>
     <label class="trap" aria-hidden="true">Web <input id="al-web" tabindex="-1" autocomplete="off"></label>
-    <button type="button" class="cta fire" data-act="alta-send" ${ready ? '' : 'disabled'}>${a.sending ? t('Enviando…') : t('Quiero mi enlace')}</button></div>
+    <button type="button" class="cta brand-btn" data-act="alta-send" ${ready ? '' : 'disabled'}>${a.sending ? t('Enviando…') : t('Quiero mi enlace')}</button></div>
     ${foot()}`;
 }
 
 /* ---------- Panel del bar ---------- */
 function panelHTML() {
   const head = (title, sub) => `<div class="head">${back()}<div><h1>${title}</h1>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
-  if (!state.mine) return `${head(t('Tu bar'))}<p class="note">${t('Abre el enlace privado que te mandamos para entrar en el panel de tu bar.')}</p><button type="button" class="cta fire" data-act="go" data-to="alta">${t('Pedir mi enlace')}</button>`;
+  if (!state.mine) return `${head(t('Tu bar'))}<p class="empty">${t('Abre el enlace privado que te mandamos para entrar en el panel de tu bar.')}</p><button type="button" class="cta brand-btn" data-act="go" data-to="alta">${t('Pedir mi enlace')}</button>`;
   const p = state.panel;
-  if (!p) return `${head(t('Tu bar'))}<p class="note">${t('Cargando…')}</p>`;
+  if (!p) return `${head(t('Tu bar'))}<p class="empty">${t('Cargando…')}</p>`;
   if (p.error) {
-    return `${head(t('Tu bar'))}<div class="empty"><span class="plate" aria-hidden="true">🔒</span><strong>${t('Este enlace ya no vale')}</strong><p>${esc(p.error)}. ${t('Pídenos uno nuevo y te lo mandamos.')}</p></div>
+    return `${head(t('Tu bar'))}<div class="ride-hero"><strong class="big-line">${t('Este enlace ya no vale')}</strong><small>${esc(p.error)}. ${t('Pídenos uno nuevo y te lo mandamos.')}</small></div>
       <button type="button" class="cta second" data-act="logout">${t('Olvidar este enlace en el móvil')}</button>`;
   }
   const today = p.tapas.filter((x) => x.fecha === p.fecha);
-  const install = state.installPrompt ? `<button type="button" class="cta second" data-act="install">📲 ${t('Añadir a la pantalla de inicio')}</button>`
-    : `<p class="note">📲 ${/iP(hone|ad|od)/.test(navigator.userAgent) ? t('Guárdalo en la pantalla de inicio: botón Compartir › «Añadir a pantalla de inicio».') : t('Guárdalo en la pantalla de inicio desde el menú del navegador.')}</p>`;
-  return `${head(esc(p.bar.nombre), `✔ ${t('Panel de tu bar')}`)}
-    <button type="button" class="cta fire" data-act="upload" data-bar="${esc(p.bar.id)}" style="min-height:64px;font-size:19px">📸 ${today.length ? t('Subir otra tapa') : t('Subir la tapa de hoy')}</button>
-    <div class="stats"><div class="stat hot"><b>🔥 ${p.hoy.fuegos}</b><small>${t('votos hoy')}</small></div><div class="stat"><b>${p.total.tapas}</b><small>${t('tapas subidas')}</small></div></div>
-    ${today.length ? `<section class="form"><h2 class="section-title">${t('Hoy')}</h2>${today.map((x) => `<div class="mine"><img src="${esc(src(x, true))}" alt=""><div><strong>${esc(x.nombre)}</strong><small>${esc(ago(x))} · 🔥 ${x.fuegos}</small></div>
-      ${x.autor === 'bar' ? `<button type="button" data-act="del-tapa" data-tapa="${esc(x.id)}">${state.confirmDelete === x.id ? t('¿Seguro? Borrar') : t('Borrar')}</button>` : ''}</div>`).join('')}</section>` : `<p class="note">${t('Hoy todavía no subiste ninguna. Los primeros del día salen arriba del todo.')}</p>`}
-    <section class="form"><h2 class="section-title">${t('Que te encuentren')}</h2>
-      <button type="button" class="cta second" data-act="share-bar" data-bar="${esc(p.bar.id)}">${SHARE}${t('Compartir el enlace de tu bar')}</button>
-      <p class="note">${t('Ponlo en tu Instagram o en un cartel con QR en la barra: «Mira aquí nuestra tapa de hoy».')}</p>${install}</section>
-    <ul class="tips"><li><span aria-hidden="true">🔒</span>${t('Este panel es solo para tu bar: no compartas el enlace privado.')}</li></ul>
-    <button type="button" class="cta second" data-act="logout">${t('Salir del panel en este móvil')}</button>${foot({ bar: p.bar.id })}`;
+  const install = state.installPrompt ? `<button type="button" class="cta second" data-act="install">${PHONE}${t('Añadir a la pantalla de inicio')}</button>`
+    : tip(PHONE, /iP(hone|ad|od)/.test(navigator.userAgent) ? t('Guárdalo en la pantalla de inicio: botón Compartir › «Añadir a pantalla de inicio».') : t('Guárdalo en la pantalla de inicio desde el menú del navegador.'));
+  return `${head(esc(p.bar.nombre), t('Panel de tu bar'))}
+    <button type="button" class="cta brand-btn" data-act="upload" data-bar="${esc(p.bar.id)}">${CAMERA}${today.length ? t('Subir otra tapa') : t('Subir la tapa de hoy')}</button>
+    <div class="stats"><div class="stat hot"><b>${p.hoy.fuegos}</b><small>${t('votos hoy')}</small></div><div class="stat"><b>${p.total.tapas}</b><small>${t('tapas subidas')}</small></div></div>
+    ${today.length ? `<section class="section"><h2>${t('Hoy')}</h2>${today.map((x) => `<div class="mine"><img src="${esc(src(x, true))}" alt=""><div><strong>${esc(x.nombre)}</strong><small>${esc(ago(x))} · ${plural(x.fuegos, '1 voto', '{n} votos')}</small></div>
+      ${x.autor === 'bar' ? `<button type="button" class="ghost" data-act="del-tapa" data-tapa="${esc(x.id)}">${state.confirmDelete === x.id ? t('¿Seguro? Borrar') : t('Borrar')}</button>` : ''}</div>`).join('')}</section>` : `<p class="empty">${t('Hoy todavía no subiste ninguna. Las primeras del día salen arriba del todo.')}</p>`}
+    <section class="section"><h2>${t('Que te encuentren')}</h2>
+      <button type="button" class="cta second" data-act="share-bar" data-bar="${esc(p.bar.id)}">${SHARE}${t('Compartir el enlace de tu bar')}</button></section>
+    <ul class="tips">${tip(INFO, t('Ponlo en tu Instagram o en un cartel con QR en la barra: «Mira aquí nuestra tapa de hoy».'))}${state.installPrompt ? '' : install}${tip(LOCK, t('Este panel es solo para tu bar: no compartas el enlace privado.'))}</ul>
+    ${state.installPrompt ? install : ''}
+    <button type="button" class="ghost" data-act="logout">${t('Salir del panel en este móvil')}</button>${foot({ bar: p.bar.id })}`;
 }
 
 /* ---------- ¿Algo no cuadra? ---------- */
@@ -737,14 +742,14 @@ function reportHTML() {
   const r = state.report;
   const bar = r.bar ? state.barById.get(r.bar) : null;
   const head = `<div class="head">${back()}<div><h1>${t('¿Algo no cuadra?')}</h1><small>${bar ? esc(bar.nombre) : t('Cuéntanoslo y lo arreglamos')}</small></div></div>`;
-  if (r.sent) return `${head}<div class="ok-box"><span class="big" aria-hidden="true">💌</span><strong>${t('¡Gracias!')}</strong><p>${t('Lo miramos lo antes posible.')}</p></div><button type="button" class="cta second" data-act="back">${t('Volver')}</button>`;
-  const kinds = Object.entries(REPORT_KINDS).filter(([k]) => bar || k === 'otro').map(([k, label]) => `<label><input type="radio" name="rep-tipo" value="${k}" ${r.tipo === k ? 'checked' : ''}>${t(label)}</label>`).join('');
-  return `${head}<div class="form"><div class="radios">${kinds}</div>
-    <label class="field"><span>${t('Cuéntanos (opcional)')}</span><textarea id="rep-texto" maxlength="1000">${esc(r.texto)}</textarea></label>
-    <label class="field"><span>${t('Tu contacto, si quieres respuesta (opcional)')}</span><input id="rep-contacto" value="${esc(r.contacto)}" maxlength="120" autocomplete="email"></label>
+  if (r.sent) return `${head}<div class="ride-hero"><span class="ok-icon">${CHECK}</span><strong class="big-line">${t('¡Gracias!')}</strong><small>${t('Lo miramos lo antes posible.')}</small></div><button type="button" class="cta" data-act="back">${t('Volver')}</button>`;
+  const kinds = Object.entries(REPORT_KINDS).filter(([k]) => bar || k === 'otro').map(([k, label]) => `<label class="chip"><input type="radio" name="rep-tipo" value="${k}" ${r.tipo === k ? 'checked' : ''}><span>${t(label)}</span></label>`).join('');
+  return `${head}<div class="form"><div class="chips">${kinds}</div>
+    <label class="field"><span>${t('Cuéntanos')} <small>${t('(si quieres)')}</small></span><textarea id="rep-texto" maxlength="1000" rows="3">${esc(r.texto)}</textarea></label>
+    <label class="field"><span>${t('Tu contacto, si quieres respuesta')} <small>${t('(si quieres)')}</small></span><input id="rep-contacto" value="${esc(r.contacto)}" maxlength="120" autocomplete="email"></label>
     <label class="trap" aria-hidden="true">Web <input id="rep-web" tabindex="-1" autocomplete="off"></label>
-    <button type="button" class="cta fire" data-act="rep-send" ${r.sending ? 'disabled' : ''}>${r.sending ? t('Enviando…') : t('Enviar')}</button>
-    <p class="note">${t('No guardamos tu IP ni nada del móvil: solo lo que escribes.')}</p></div>`;
+    <button type="button" class="cta" data-act="rep-send" ${r.sending ? 'disabled' : ''}>${r.sending ? t('Enviando…') : t('Enviar')}</button>
+    <p class="foot">${t('No guardamos tu IP ni nada del móvil: solo lo que escribes.')}</p></div>`;
 }
 
 /* ---------- Pintar ---------- */
@@ -959,31 +964,10 @@ async function sendUpload() {
 }
 
 /* ---------- «¡Que tapa!» ---------- */
-function burst(from) {
-  if (reduced) return;
-  const box = from.getBoundingClientRect();
-  const icons = ['🔥', '🔥', '🔥', '🍷', '✨', '🔥'];
-  for (let i = 0; i < 12; i += 1) {
-    const s = document.createElement('span');
-    s.className = 'burst';
-    s.textContent = icons[i % icons.length];
-    const angle = (Math.PI * 2 * i) / 12 + Math.random() * 0.4;
-    const dist = 70 + Math.random() * 70;
-    s.style.left = `${box.left + box.width / 2 - 13}px`;
-    s.style.top = `${box.top + box.height / 2 - 13}px`;
-    s.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
-    s.style.setProperty('--dy', `${Math.sin(angle) * dist - 40}px`);
-    s.style.setProperty('--r', `${Math.round(Math.random() * 80 - 40)}deg`);
-    document.body.append(s);
-    setTimeout(() => s.remove(), 1000);
-  }
-  navigator.vibrate?.(30);
-}
-
 async function fuego(id, button) {
   const tapa = state.tapas.find((x) => x.id === id) ?? state.bar?.tapas.find((x) => x.id === id);
   if (!tapa || state.fuegos[id]) return;
-  burst(button);
+  navigator.vibrate?.(20);
   state.fuegos[id] = tapa.fecha;
   store.set('quetapa-fuegos', state.fuegos);
   const all = [state.tapas.find((x) => x.id === id), state.bar?.tapas.find((x) => x.id === id)].filter(Boolean);
@@ -1043,7 +1027,7 @@ function bindSheet() {
         const id = state.barId;
         state.favs = state.favs.includes(id) ? state.favs.filter((x) => x !== id) : [id, ...state.favs].slice(0, 30);
         store.set('quetapa-favs', state.favs);
-        toast(state.favs.includes(id) ? t('Guardado en tus bares ⭐') : t('Quitado de tus bares'));
+        toast(state.favs.includes(id) ? t('Guardado en tus bares') : t('Quitado de tus bares'));
         render();
         break;
       }
@@ -1290,7 +1274,7 @@ function start() {
   bindSheet();
   bindSheetDrag();
   $('#theme').addEventListener('click', () => setTheme(isDark() ? 'light' : 'dark'));
-  $('#snap').addEventListener('click', () => go(state.view === 'bar' && state.barId ? `subir/${state.barId}` : 'subir'));
+  $('#upload-btn').addEventListener('click', () => go(state.view === 'bar' && state.barId ? `subir/${state.barId}` : 'subir'));
   $('#locate').addEventListener('click', locate);
   $('#zoom-in').addEventListener('click', () => map?.zoomIn());
   $('#zoom-out').addEventListener('click', () => map?.zoomOut());
@@ -1308,7 +1292,6 @@ function start() {
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.installPrompt = e; if (state.view === 'panel') render(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadToday({ quiet: true }); });
   setInterval(() => { if (document.visibilityState === 'visible') loadToday({ quiet: true }); }, 120000);
-  if (!sessionStorage.getItem('quetapa-hola')) { $('#snap').classList.add('hello'); try { sessionStorage.setItem('quetapa-hola', '1'); } catch { /* nada */ } }
 
   route();
   initMap();

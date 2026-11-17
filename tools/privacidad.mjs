@@ -92,8 +92,8 @@ const page = (lang, title, body, other) => `<!doctype html>
 @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400; font-display: swap; src: url(/vendor/fonts/atkinson-hyperlegible-next-latin-400-normal.woff2) format("woff2"); }
 @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 700; font-display: swap; src: url(/vendor/fonts/atkinson-hyperlegible-next-latin-700-normal.woff2) format("woff2"); }
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 700; font-display: swap; src: url(/vendor/fonts/bricolage-grotesque-latin-700-normal.woff2) format("woff2"); }
-:root { --bg: #FFF6EC; --soft: #FCEBDD; --ink: #24130C; --mute: #6B5345; --brand: #F0431C; color-scheme: light dark; }
-@media (prefers-color-scheme: dark) { :root { --bg: #15100D; --soft: #2D211C; --ink: #FFF3E8; --mute: #D2BBAA; --brand: #FF5A2E; } }
+:root { --bg: #FFFFFF; --soft: #F0F2F0; --ink: #121416; --mute: #4A5158; --brand: #121416; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #14171B; --soft: #1F242A; --ink: #F4F5F2; --mute: #BCC3CA; --brand: #F4F5F2; } }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 "Atkinson Hyperlegible Next", system-ui, sans-serif; }
 a { color: inherit; text-underline-offset: 3px; }
@@ -102,10 +102,10 @@ a { color: inherit; text-underline-offset: 3px; }
 .brand img { border-radius: 8px; }
 .top nav { display: flex; gap: 16px; font-weight: 700; }
 main { max-width: 760px; margin: 0 auto; padding: 4px 20px 40px; }
-h1 { margin: 8px 0 6px; font: 700 clamp(32px, 7vw, 46px)/1.05 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.03em; }
-h2 { margin: 30px 0 8px; font: 700 22px "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.01em; }
+h1 { margin: 8px 0 6px; font: 700 clamp(28px, 6vw, 40px)/1.1 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.01em; }
+h2 { margin: 30px 0 8px; font: 700 21px "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.01em; }
 .sub, .note { color: var(--mute); }
-.summary { padding: 6px 20px; border-radius: 18px; background: var(--soft); }
+.summary { padding: 6px 20px; border-radius: 14px; background: var(--soft); }
 .summary li { margin: 8px 0; }
 </style>
 </head>
