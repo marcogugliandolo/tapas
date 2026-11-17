@@ -3,8 +3,10 @@
 // Repsol, Planomato) y otros con tapas típicas puestas de ejemplo. Las «fotos» son dibujos y las
 // notas y las horas, inventadas. La web lo avisa arriba y cada tapa lleva la marca «Ejemplo».
 //
-// Si el servidor tiene los bares de OpenStreetMap, cada uno sale en su sitio exacto y además se
-// rellenan otros bares de verdad del centro y de A Milagrosa; si no, salen en una posición aproximada.
+// Si el servidor tiene los bares de OpenStreetMap, cada uno sale en su sitio exacto y además casi
+// todos los demás bares de Lugo llevan una tapa típica de ejemplo (siempre la misma para cada bar);
+// unos pocos se quedan sin tapa para que se vea cómo queda un bar que aún no la subió.
+// Sin el servidor, salen solo los conocidos, en una posición aproximada.
 
 const FONDOS = ['#F3E6D8', '#E8EEF0', '#F1E4E1', '#E9EFE3', '#F4EBD6', '#ECE7F1'];
 
@@ -58,23 +60,27 @@ const BARES = [
     tapas: [['Oreja á feira', ['carne', 'sin-gluten'], '🥘']] },
 ];
 
-// Tapas típicas para rellenar otros bares de verdad que haya en el mapa.
+// Tapas típicas para el resto de bares.
 const TIPICAS = [
   ['Zorza con patatas', ['carne'], '🥓'], ['Pimientos de Padrón', ['veggie', 'sin-gluten'], '🫑'], ['Calamares', ['mar'], '🦑'],
   ['Tortilla de patata', ['huevo', 'veggie'], '🥚'], ['Lacón con cachelos', ['carne', 'sin-gluten'], '🍖'], ['Patatas bravas', ['veggie'], '🥔'],
   ['Queso de Arzúa con membrillo', ['veggie', 'sin-gluten'], '🧀'], ['Gambas al ajillo', ['mar', 'sin-gluten'], '🍤'], ['Lentejas', ['cuchara'], '🍲'],
   ['Albóndigas en salsa', ['carne'], '🥘'], ['Ensaladilla', ['mar'], '🥗'], ['Sardinas', ['mar', 'sin-gluten'], '🐟'],
   ['Montadito de lomo', ['carne'], '🥖'], ['Champiñones al ajillo', ['veggie', 'sin-gluten'], '🍄'], ['Empanada de carne', ['carne'], '🥟'],
+  ['Callos', ['cuchara', 'carne'], '🍲'], ['Oreja á feira', ['carne', 'sin-gluten'], '🥘'], ['Raxo', ['carne'], '🥩'],
+  ['Pulpo á feira', ['mar', 'sin-gluten'], '🐙'], ['Mejillones en escabeche', ['mar', 'sin-gluten'], '🦪'], ['Tortilla de Betanzos', ['huevo', 'veggie'], '🍳'],
+  ['Croquetas de jamón', ['carne'], '🧆'], ['Costilla al horno', ['carne'], '🍖'], ['Chorizo al vino', ['carne'], '🥘'],
+  ['Pincho moruno', ['carne'], '🍢'], ['Empanada de zamburiñas', ['mar'], '🥟'], ['Garbanzos con espinacas', ['cuchara', 'veggie'], '🍲'],
+  ['Bocadillo de calamares', ['mar'], '🥖'], ['Huevos rotos con chorizo', ['huevo', 'carne'], '🍳'], ['Tosta de pimientos asados', ['veggie'], '🍞'],
+  ['Mini hamburguesa', ['carne'], '🍔'], ['Alitas de pollo', ['carne', 'sin-gluten'], '🍗'], ['Caldo gallego', ['cuchara'], '🍲'],
 ];
-
-// Dónde buscar bares para rellenar: la zona de viños y A Milagrosa.
-const ZONAS = [{ lat: 43.0099, lon: -7.5575 }, { lat: 43.018, lon: -7.5463 }];
-const RELLENO = 14;
+// Sitios donde una tapa gallega quedaría rara: pizzerías, japoneses, heladerías…
+const NO_TAPAS = /pizz|sushi|kebab|burger|hamburg|\bwok\b|chin[ao]|asia|japon|india|mexic|taco|poke|ramen|thai|helad|pastel|panader|churrer|starbucks|mcdonald|domino|kfc|dunkin|crep|gofre|yogur|\btea\b/;
+const SIN_TAPA = 0.1; // la parte de bares que se queda sin tapa
 
 const madridDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
-const metros = (a, b) => Math.hypot((a.lat - b.lat) * 111320, (a.lon - b.lon) * 111320 * Math.cos((a.lat * Math.PI) / 180));
-/** Un número «al azar» pero siempre el mismo para la misma posición, para que el ejemplo no baile. */
-const azar = (n) => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+/** Un número «al azar» entre 0 y 1, pero siempre el mismo para el mismo texto: así el ejemplo no baila. */
+const azar = (texto) => { let h = 2166136261; for (const c of String(texto)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; return (h >>> 0) / 4294967296; };
 
 /** Los datos de ejemplo. `reales` son los bares que manda el servidor (pueden no venir). */
 export function demoData(reales = []) {
@@ -90,36 +96,36 @@ export function demoData(reales = []) {
     conTapas.push({ bar: real ? { ...real, reg: false } : { id: `ejemplo-${b.id}`, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir, reg: false }, tapas: b.tapas });
   }
 
-  // Otros bares de verdad cerca de las zonas de tapeo, separados entre sí para que se vean bien.
-  const cerca = (r) => Math.min(...ZONAS.map((z) => metros(z, r)));
-  const candidatos = reales
-    .filter((r) => !usados.has(r.id) && (!r.tipo || r.tipo === 'bar' || r.tipo === 'pub') && cerca(r) < 650)
-    .sort((a, b) => cerca(a) - cerca(b));
-  const elegidos = [];
-  for (const r of candidatos) {
-    if (elegidos.length >= RELLENO) break;
-    if ([...elegidos, ...conTapas.map((x) => x.bar)].some((o) => metros(o, r) < 45)) continue;
-    elegidos.push(r);
-  }
-  elegidos.forEach((r, i) => {
+  // Casi todos los demás bares de verdad, con una tapa típica que depende del bar.
+  for (const r of reales) {
+    if (usados.has(r.id) || NO_TAPAS.test(norm(r.nombre)) || azar(`${r.id}-sin`) < SIN_TAPA) continue;
     usados.add(r.id);
-    const hoy = TIPICAS[i % TIPICAS.length];
-    const antes = TIPICAS[(i + 5) % TIPICAS.length];
-    conTapas.push({ bar: { ...r, reg: false }, tapas: i % 3 === 0 ? [hoy, antes] : [hoy] });
-  });
+    const pick = (clave) => TIPICAS[Math.floor(azar(`${r.id}-${clave}`) * TIPICAS.length)];
+    const hoy = pick('hoy');
+    let antes = pick('antes');
+    if (antes === hoy) antes = TIPICAS[(TIPICAS.indexOf(hoy) + 7) % TIPICAS.length];
+    const dias = azar(`${r.id}-dia`);
+    // La mayoría la subió hoy; algunos ayer o antes de ayer, para que se vea «la última que subió».
+    const lista = dias < 0.85 ? [hoy] : [null, hoy];
+    if (dias > 0.97) lista.unshift(null);
+    if (azar(`${r.id}-historia`) < 0.35) lista.push(antes);
+    conTapas.push({ bar: { ...r, reg: false }, tapas: lista });
+  }
 
   const tapas = [];
   let n = 0;
   for (const { bar, tapas: lista } of conTapas) {
-    lista.forEach(([nombre, tipos, emoji], dias) => {
+    lista.forEach((tapa, dias) => {
+      if (!tapa) return; // ese día no subió nada
+      const [nombre, tipos, emoji] = tapa;
       n += 1;
-      const r = azar(n);
+      const clave = `${bar.id}-${dias}`;
       // Hoy: subida entre hace 10 minutos y hace 4 horas; días atrás, a media mañana.
-      const ago = dias ? dias * 1440 + 60 + Math.round(r * 120) : 10 + Math.round(azar(n + 50) * 230);
+      const ago = dias ? dias * 1440 + 60 + Math.round(azar(`${clave}-h`) * 120) : 10 + Math.round(azar(`${clave}-h`) * 230);
       tapas.push({
         id: `ejemplo-t${n}`, bar: bar.id, fecha: dias ? dayBefore(dias) : fecha, at: new Date(now - ago * 60000).toISOString(),
         nombre, tipos, nota: '', autor: 'ejemplo',
-        votos: 3 + Math.round(r * 34), media: Math.round((3.6 + azar(n + 99) * 1.3) * 10) / 10,
+        votos: 3 + Math.round(azar(`${clave}-v`) * 34), media: Math.round((3.5 + azar(`${clave}-m`) * 1.4) * 10) / 10,
         img: dibujo(emoji, n), mini: dibujo(emoji, n, true),
       });
     });

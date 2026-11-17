@@ -116,6 +116,9 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .card .votes { position: absolute; right: 8px; bottom: 8px; }
 .card .new { position: absolute; left: 8px; top: 8px; height: 22px; padding: 0 8px; border-radius: 11px; background: var(--surface); color: var(--brand-fg); font-size: 12px; font-weight: 700; line-height: 22px; }
 .card.old .ph { opacity: .7; }
+.card.more .ph { display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-fg); text-align: center; }
+.card.more .ph b { display: block; font-family: var(--display); font-size: 30px; line-height: 1.1; }
+.card.more .ph small { font-size: var(--t-label); font-weight: 700; }
 @media (hover: hover) { .card:hover img { transform: scale(1.04); } }
 .votes { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px 0 6px; border-radius: 12px; background: var(--brand); color: var(--on-brand); font-size: 13px; font-weight: 700; }
 .votes svg { width: 13px; height: 13px; fill: currentColor; stroke: none; }

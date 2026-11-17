@@ -525,6 +525,14 @@ function card(tapa) {
     <strong>${esc(tapa.nombre)}</strong><small>${esc(bar?.nombre ?? '')} · ${esc(ago(tapa))}</small></button>`;
 }
 
+/** La fila de tapas: las primeras y una tarjeta para ver el resto, que con muchos bares serían cientos. */
+const REEL_MAX = 24;
+function reelHTML(list) {
+  if (state.reelAll || list.length <= REEL_MAX + 1) return list.map(card).join('');
+  const rest = list.length - REEL_MAX;
+  return `${list.slice(0, REEL_MAX).map(card).join('')}<button type="button" class="card more" data-act="reel-all"><span class="ph"><span><b>+${rest}</b><small>${t('tapas más')}</small></span></span><strong>${t('Ver todas')}</strong></button>`;
+}
+
 function barRow(bar, extra = '') {
   const tapa = state.latest.get(bar.id);
   const thumb = tapa ? `<img class="thumb" src="${esc(src(tapa, true))}" alt="" loading="lazy">` : `<span class="thumb">${GLASS}</span>`;
@@ -556,7 +564,7 @@ function homeHTML() {
   else {
     const upload = SUBEN_CLIENTES ? `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>` : '';
     main = today.length
-      ? `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}${upload}`
+      ? `${filters}<div class="reel">${reelHTML(list)}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}${upload}`
       : upload;
   }
 
@@ -1228,7 +1236,8 @@ function bindSheet() {
         go(`bar/${d.bar}`);
         break;
       case 'pick-tapa': state.tapaId = d.tapa; render(); $('#sheet-body').scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); break;
-      case 'filter': state.filter = d.filter; render(); break;
+      case 'filter': state.filter = d.filter; state.reelAll = false; render(); break;
+      case 'reel-all': state.reelAll = true; render(); break;
       case 'rate': rate(d.tapa, Number(d.nota)); break;
       case 'fav': {
         const id = state.barId;

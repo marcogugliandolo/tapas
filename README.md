@@ -14,7 +14,7 @@ Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil 
 - **Se instala como una app** y abre sin cobertura con lo último que vio.
 - **Sin cuenta, sin cookies de seguimiento y sin publicidad.** Lo explica la página de [privacidad](app/privacidad/index.html).
 
-Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta bares de Lugo con tapas de muestra: unos con su tapa conocida (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica, A Xarra…) y, si el servidor ya tiene los bares de OpenStreetMap, otros bares de la zona de viños y A Milagrosa con tapas típicas. Las fotos son dibujos, las notas son inventadas y la web avisa arriba de que es un ejemplo. No envía nada.
+Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta bares de Lugo con tapas de muestra: unos con su tapa conocida (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica, A Xarra…) y, si el servidor ya tiene los bares de OpenStreetMap, casi todos los demás bares de Lugo con una tapa típica (siempre la misma para cada bar; uno de cada diez se queda sin tapa para ver cómo queda, y las pizzerías, japoneses o heladerías no llevan). Las fotos son dibujos, las notas son inventadas y la web avisa arriba de que es un ejemplo. No envía nada.
 
 ## Desplegar en Portainer
 
