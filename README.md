@@ -4,16 +4,17 @@ Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil 
 
 - **El mapa con las fotos.** Cada bar con tapa hoy sale con la foto de su tapa y su nota media.
 - **«Hoy en Lugo».** Las tapas del día en fila, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y las tres mejor valoradas.
+- **Las suben los bares.** Quien entra en la web solo mira las tapas, las puntúa y llega andando; la foto de cada día la sube el bar desde su panel.
 - **Notas de 1 a 5 estrellas.** Al abrir una tapa la puntúas (una nota por persona, tapa y día; se puede cambiar) y cada bar enseña su media juntando todas sus tapas. Sin cuentas.
-- **Sube tu tapa.** Cualquiera hace la foto de lo que le pusieron con la consumición. El móvil la reduce y le quita la ubicación antes de enviarla, y no sale hasta que se revisa.
+- **Fotos de clientes (apagado).** El código para que cualquiera suba la foto de lo que le pusieron sigue ahí, con moderación, pero está oculto: se enciende con `SUBEN_CLIENTES` en `app/app.js`. Igual las tarjetas «¿Tienes un bar?» con `MOSTRAR_ALTA`.
 - **Panel del bar.** Cada bar dado de alta tiene un enlace privado: con él sube su tapa en 20 segundos, sale al momento con la marca «Foto del bar» y ve su nota media.
-- **Todos los bares de Lugo.** El servidor descarga una vez al día los bares, cafeterías y restaurantes de OpenStreetMap, así que se puede subir la tapa de cualquiera aunque no se haya dado de alta. Cada uno tiene su botón «¿Es tu bar?».
+- **Todos los bares de Lugo.** El servidor descarga una vez al día los bares, cafeterías y restaurantes de OpenStreetMap, así que salen en el mapa aunque no se hayan dado de alta. Cada uno tiene su botón «¿Es tu bar?».
 - **Cómo llegar a pie** dentro de la propia web: la ruta por las calles de Lugo dibujada en el mapa, con los minutos andando, y «Empezar» para que el mapa te siga hasta el bar sin que se apague la pantalla. También se puede abrir en Google Maps o en Mapas de Apple para que te vayan indicando.
-- **Tus bares** con la estrella, **cerca de ti** con la ubicación, **buscador** de bares y tapas, **compartir** cada bar con un enlace y **modo oscuro**.
+- **Tus bares** con el marcador, **cerca de ti** con la ubicación, **buscador** de bares y tapas, **compartir** cada bar con un enlace y **modo oscuro**.
 - **Se instala como una app** y abre sin cobertura con lo último que vio.
 - **Sin cuenta, sin cookies de seguimiento y sin publicidad.** Lo explica la página de [privacidad](app/privacidad/index.html).
 
-Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta tapas conocidas de bares de Lugo (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica), en su sitio exacto si el servidor ya tiene los bares de OpenStreetMap. Las fotos son dibujos, las notas son inventadas y la web avisa arriba de que es un ejemplo. No envía nada.
+Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta bares de Lugo con tapas de muestra: unos con su tapa conocida (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica, A Xarra…) y, si el servidor ya tiene los bares de OpenStreetMap, otros bares de la zona de viños y A Milagrosa con tapas típicas. Las fotos son dibujos, las notas son inventadas y la web avisa arriba de que es un ejemplo. No envía nada.
 
 ## Desplegar en Portainer
 

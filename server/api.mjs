@@ -38,6 +38,7 @@ const publicTapa = (t) => ({
 });
 const publicBar = (b, reg, nota = null) => ({
   id: b.id, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir || '', reg,
+  ...(b.tipo ? { tipo: b.tipo } : {}),
   ...(b.insta ? { insta: b.insta } : {}),
   ...(nota?.votos ? { votos: nota.votos, media: mediaDe(nota.suma, nota.votos) } : {}),
 });

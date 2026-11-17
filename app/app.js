@@ -510,9 +510,11 @@ function langSwitch() {
   const lang = getLang();
   return `<div class="lang" role="group" aria-label="${t('Idioma')}"><button type="button" data-act="lang" data-lang="es" aria-pressed="${lang === 'es'}">Castellano</button><button type="button" data-act="lang" data-lang="gl" aria-pressed="${lang === 'gl'}">Galego</button></div>`;
 }
-// La tarjeta «¿Tienes un bar?» del inicio, oculta de momento. La página de alta sigue en /#alta.
+// Las tarjetas «¿Tienes un bar?» y «¿Es tu bar?», ocultas de momento. La página de alta sigue en /#alta.
 const MOSTRAR_ALTA = false;
-const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Tapas conocidas de bares de Lugo para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>` : '');
+// Las tapas las suben los bares desde su panel; quien entra en la web solo las mira y las puntúa.
+const SUBEN_CLIENTES = false;
+const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Bares de Lugo con tapas de muestra para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>` : '');
 const tip = (icon, text) => `<li><span class="tip-icon">${icon}</span><span>${text}</span></li>`;
 const nowCard = ({ act, to = '', bar = '', icon, label = '', title, sub = '', line = false }) => `<button type="button" class="now${line ? ' line' : ''}" data-act="${act}"${to !== '' ? ` data-to="${esc(to)}"` : ''}${bar ? ` data-bar="${esc(bar)}"` : ''}><span class="now-icon">${icon}</span><span class="now-text">${label ? `<span class="now-label">${label}</span>` : ''}<strong>${title}</strong>${sub ? `<small>${sub}</small>` : ''}</span><span class="now-go" aria-hidden="true">›</span></button>`;
 
@@ -551,11 +553,11 @@ function homeHTML() {
 
   let main;
   if (!state.loaded) main = `<p class="empty">${t('Cargando las tapas de hoy…')}</p>`;
-  else if (!today.length) {
-    main = `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
-  } else {
-    main = `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}
-      <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
+  else {
+    const upload = SUBEN_CLIENTES ? `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>` : '';
+    main = today.length
+      ? `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}${upload}`
+      : upload;
   }
 
   const ranked = [...today].filter((x) => x.votos > 0).sort(byRating).slice(0, 3);
@@ -614,20 +616,21 @@ function barHTML() {
           <div class="rate-head"><strong>${mine ? t('Tu nota') : t('¿Qué te pareció?')}</strong><small>${tapa.votos ? `${STAR_FILL}${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}` : t('Sé el primero en puntuarla')}</small></div>
           <div class="stars" role="group" aria-label="${t('Tu nota')}">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= mine ? 'on' : ''}" data-act="rate" data-tapa="${esc(tapa.id)}" data-nota="${n}" aria-pressed="${n === mine}" aria-label="${plural(n, '1 estrella', '{n} estrellas')}">${STAR}</button>`).join('')}</div>
           ${mine ? `<small class="rate-note">${t('Puedes cambiarla hasta mañana.')}</small>` : ''}</div>`
-        : `${tapa.votos ? `<p class="note">${STAR_FILL} ${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}</p>` : ''}<p class="note">${t('Esta es la última que vimos. ¿Vas hoy? Sube la de hoy y aparecerá aquí.')}</p>`}`;
+        : `${tapa.votos ? `<p class="note">${STAR_FILL} ${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}</p>` : ''}<p class="note">${t('Esta es la última que subió. Cuando suba la de hoy, saldrá aquí.')}</p>`}`;
   } else {
-    body = `<div class="photo none"><div>${CAMERA}<strong>${t('Aún no sabemos qué tapa ponen')}</strong><span>${t('Si estás allí, hazle una foto y sé el primero.')}</span></div></div>`;
+    body = `<div class="photo none"><div>${CLOCK_ICON}<strong>${t('Este bar aún no ha subido su tapa')}</strong><span>${t('Cuando la suba, saldrá aquí con su foto.')}</span></div></div>`;
   }
 
+  const canUpload = owner || SUBEN_CLIENTES;
   const actions = `<div class="buttons">
-    <button type="button" class="cta ${tapa && isToday(tapa) ? 'second' : 'brand-btn'}" data-act="upload" data-bar="${esc(bar.id)}">${CAMERA}${owner ? t('Subir la tapa de hoy') : t('Subir la de hoy')}</button>
-    <button type="button" class="cta second" data-act="go" data-to="ruta/${esc(bar.id)}">${WALK}${t('Cómo llegar')}</button></div>
+    ${canUpload ? `<button type="button" class="cta ${tapa && isToday(tapa) ? 'second' : 'brand-btn'}" data-act="upload" data-bar="${esc(bar.id)}">${CAMERA}${owner ? t('Subir la tapa de hoy') : t('Subir la de hoy')}</button>` : ''}
+    <button type="button" class="cta ${canUpload ? 'second' : 'brand-btn'}" data-act="go" data-to="ruta/${esc(bar.id)}">${WALK}${t('Cómo llegar')}</button></div>
     ${bar.dir || bar.insta ? `<p class="addr">${PIN_ICON}<span>${esc(bar.dir || '')}${state.me ? ` · ${distanceText(distance(state.me, bar))}` : ''}${bar.insta ? `${bar.dir ? ' · ' : ''}<a href="https://instagram.com/${esc(bar.insta)}" target="_blank" rel="noopener">@${esc(bar.insta)}</a>` : ''}</span></p>` : ''}`;
 
   const grid = history.length > 1 ? `<section class="section"><h2>${t('Otras tapas de aquí')}</h2>
     <div class="grid">${history.slice(0, 24).map((x) => `<button type="button" data-act="pick-tapa" data-tapa="${esc(x.id)}" aria-current="${x.id === tapa?.id}" aria-label="${esc(x.nombre)} · ${esc(isToday(x) ? t('Hoy') : shortDate(x.fecha))}"><img src="${esc(src(x, true))}" alt="" loading="lazy"></button>`).join('')}</div></section>` : '';
 
-  const claim = !bar.reg && !owner ? nowCard({ act: 'go', to: `alta/${bar.id}`, icon: STORE, title: t('¿Es tu bar?'), sub: t('Sube tú la tapa cada día y sal destacado en el mapa. Gratis.'), line: true }) : '';
+  const claim = MOSTRAR_ALTA && !bar.reg && !owner ? nowCard({ act: 'go', to: `alta/${bar.id}`, icon: STORE, title: t('¿Es tu bar?'), sub: t('Sube tú la tapa cada día y sal destacado en el mapa. Gratis.'), line: true }) : '';
 
   return `${headHTML}${demoBanner()}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
 }
@@ -893,7 +896,8 @@ function route() {
     return;
   }
   if (name === 'subir') {
-    const barId = a && state.barById.has(a) ? a : null;
+    if (!SUBEN_CLIENTES && !(state.mine && (!a || a === state.mine.bar))) { history.replaceState(null, '', location.pathname + location.search); route(); return; }
+    const barId = a && state.barById.has(a) ? a : (SUBEN_CLIENTES ? null : state.mine.bar);
     if (!state.upload || state.upload.done || (a && state.upload.bar !== a)) state.upload = { bar: barId, photo: null, nombre: '', tipos: [], nota: '', q: '' };
     setView('upload');
     return;
