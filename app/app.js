@@ -53,6 +53,7 @@ const state = {
   report: null,
   confirmDelete: null,
   installPrompt: null,
+  nav: null, // la ruta a pie abierta: { bar, status, coords, metros, left, following, arrived }
 };
 let navigated = false;
 
@@ -208,6 +209,8 @@ function setTheme(value) {
 /* ---------- Mapa ---------- */
 let map = null;
 let mapReady = false;
+let streetsData = null;
+const loadStreets = async () => (streetsData ??= await fetch('data/streets.json').then((r) => { if (!r.ok) throw new Error('calles'); return r.json(); }));
 let userMoved = false;
 let themeTable = null;
 const themeName = () => (isDark() ? 'dark' : 'light');
@@ -232,6 +235,8 @@ function applyMapTheme() {
     for (const [key, value] of Object.entries(paint)) map.setPaintProperty(id, key, value);
   }
   map.setPaintProperty('bares-dot', 'circle-stroke-color', isDark() ? '#1B1F24' : '#FFFFFF');
+  map.setPaintProperty('ruta-casing', 'line-color', isDark() ? '#1B1F24' : '#FFFFFF');
+  map.setPaintProperty('ruta-line', 'line-color', isDark() ? '#FF6A4D' : '#E4472B');
   map.setPaintProperty('bares-dot', 'circle-color', ['case', ['==', ['get', 'reg'], 1], '#E4472B', isDark() ? '#8A939B' : '#7C858D']);
 }
 
@@ -242,7 +247,7 @@ async function buildStyle(remote) {
     return paintStyle(style);
   }
   // Sin el mapa de fuera (sin conexión o bloqueado): las calles de Lugo, guardadas en la web.
-  const streets = await fetch('data/streets.json').then((r) => r.json());
+  const streets = await loadStreets();
   themeTable = {
     light: { bg: { 'background-color': '#E7E9E6' }, streets: { 'line-color': '#FFFFFF' } },
     dark: { bg: { 'background-color': '#14171B' }, streets: { 'line-color': '#2A3037' } },
@@ -266,6 +271,9 @@ function barsGeoJSON() {
 
 function addOverlays() {
   shownVersion = state.version;
+  map.addSource('ruta', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({ id: 'ruta-casing', type: 'line', source: 'ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#1B1F24' : '#FFFFFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 6, 17, 11] } });
+  map.addLayer({ id: 'ruta-line', type: 'line', source: 'ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#FF6A4D' : '#E4472B', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 3, 17, 6] } });
   map.addSource('bares', { type: 'geojson', data: barsGeoJSON() });
   map.addLayer({
     id: 'bares-dot',
@@ -282,6 +290,7 @@ function addOverlays() {
   mapReady = true;
   applyMapTheme();
   updateMap();
+  if (state.nav?.coords) drawRoute(state.nav.following ? state.nav.rest ?? state.nav.coords : state.nav.coords);
   // El mapa puede tardar más que los datos: al estar listo, se va al bar abierto o se centra Lugo.
   const bar = state.view === 'bar' ? state.barById.get(state.barId) : null;
   if (bar) setTimeout(() => flyTo(bar.lon, bar.lat), 60);
@@ -360,7 +369,7 @@ function paintPin(entry, bar, tapa, rank) {
   const { wrap } = entry;
   const el = wrap.firstChild;
   const today = isToday(tapa);
-  const sel = state.barId === bar.id && state.view === 'bar';
+  const sel = state.barId === bar.id && (state.view === 'bar' || state.view === 'route');
   el.classList.toggle('old', !today);
   el.classList.toggle('sel', sel);
   wrap.classList.toggle('sel', sel);
@@ -403,7 +412,7 @@ function updateMap() {
     if (!keep.has(barId)) { entry.marker.remove(); pins.delete(barId); }
   }
   // El bar abierto sin tapa: una chincheta propia para saber dónde está.
-  const selected = state.view === 'bar' && state.barId && !pins.has(state.barId) ? state.barById.get(state.barId) : null;
+  const selected = (state.view === 'bar' || state.view === 'route') && state.barId && !pins.has(state.barId) ? state.barById.get(state.barId) : null;
   if (selected) {
     if (!ghost) {
       const el = document.createElement('div');
@@ -475,6 +484,8 @@ const LOCK = svg('<rect x="5" y="10.5" width="14" height="10" rx="2.5"></rect><p
 const PHONE = svg('<rect x="7" y="2.8" width="10" height="18.4" rx="2.5"></rect><path d="M11 18h2"></path>', 18);
 const CLOCK_ICON = svg('<circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path>', 18);
 const MAP_ICON = svg('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"></path><path d="M9 4v14M15 6v14"></path>', 20);
+const WALK = svg('<circle cx="13" cy="4.5" r="1.8"></circle><path d="M10.5 21l2-6.5-2.5-2.5 1-4.5 3 2.5 3 1"></path><path d="M11 8l-3 1.5-1 3.5M12.5 14.5l2.5 2.5 1 4"></path>', 20);
+const NAV = svg('<path d="M12 3l7 18-7-4-7 4z"></path>', 20);
 const flame = (n) => `<span class="votes">${FLAME}${n}</span>`;
 
 const back = () => `<button type="button" class="back" data-act="back" aria-label="${t('Volver')}" title="${t('Volver')}">${BACK_ICON}</button>`;
@@ -594,7 +605,7 @@ function barHTML() {
 
   const actions = `<div class="buttons">
     <button type="button" class="cta ${tapa && isToday(tapa) ? 'second' : 'brand-btn'}" data-act="upload" data-bar="${esc(bar.id)}">${CAMERA}${owner ? t('Subir la tapa de hoy') : t('Subir la de hoy')}</button>
-    <a class="cta second" href="https://www.google.com/maps/dir/?api=1&amp;destination=${bar.lat},${bar.lon}" target="_blank" rel="noopener">${PIN_ICON}${t('Cómo llegar')}</a></div>
+    <button type="button" class="cta second" data-act="go" data-to="ruta/${esc(bar.id)}">${WALK}${t('Cómo llegar')}</button></div>
     ${bar.dir || bar.insta ? `<p class="addr">${PIN_ICON}<span>${esc(bar.dir || '')}${state.me ? ` · ${distanceText(distance(state.me, bar))}` : ''}${bar.insta ? `${bar.dir ? ' · ' : ''}<a href="https://instagram.com/${esc(bar.insta)}" target="_blank" rel="noopener">@${esc(bar.insta)}</a>` : ''}</span></p>` : ''}`;
 
   const grid = history.length > 1 ? `<section class="section"><h2>${t('Otras tapas de aquí')}</h2>
@@ -731,6 +742,43 @@ function panelHTML() {
     <button type="button" class="ghost" data-act="logout">${t('Salir del panel en este móvil')}</button>${foot({ bar: p.bar.id })}`;
 }
 
+/* ---------- Cómo llegar ---------- */
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const metresText = (m) => (m < 1000 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`);
+const minutesFor = (m) => Math.max(1, Math.round(m / 75));
+function externalNav(bar) {
+  const google = `https://www.google.com/maps/dir/?api=1&amp;destination=${bar.lat},${bar.lon}&amp;travelmode=walking`;
+  const apple = `https://maps.apple.com/?daddr=${bar.lat},${bar.lon}&amp;dirflg=w`;
+  return `<section class="section"><h2>${t('Con tu app de mapas, que te va diciendo por dónde ir')}</h2><div class="buttons">
+    ${isIOS() ? `<a class="cta second" href="${apple}" target="_blank" rel="noopener">${t('Mapas de Apple')}</a>` : ''}
+    <a class="cta second" href="${google}" target="_blank" rel="noopener">Google Maps</a></div></section>`;
+}
+function routeHTML() {
+  const n = state.nav;
+  const bar = state.barById.get(n?.bar);
+  const head = `<div class="head">${back()}<div><h1>${t('Cómo llegar')}</h1><small>${esc(bar?.nombre ?? '')}</small></div></div>`;
+  if (!bar) return `${head}<p class="empty">${state.loaded ? t('Este bar ya no está en el mapa') : t('Cargando…')}</p>`;
+  if (n.arrived) {
+    return `${head}<div class="ride-hero"><span class="ok-icon">${CHECK}</span><strong class="big-line">${t('¡Has llegado!')}</strong><small>${t('Que aproveche.')}</small></div>
+      <button type="button" class="cta brand-btn" data-act="go" data-to="bar/${esc(bar.id)}">${t('Ver la tapa')}</button>`;
+  }
+  if (n.status === 'locating') return `${head}<p class="empty">${t('Buscando dónde estás…')}</p>`;
+  if (n.status === 'nogps') {
+    return `${head}<div class="ride-hero"><strong class="big-line">${t('No sabemos dónde estás')}</strong><small>${t('Da permiso de ubicación al navegador para ver la ruta en el mapa.')}</small></div>
+      <button type="button" class="cta" data-act="nav-retry">${PIN_ICON}${t('Probar otra vez')}</button>${externalNav(bar)}`;
+  }
+  if (n.status === 'far') {
+    return `${head}<div class="ride-hero"><strong class="big-line">${t('Estás lejos de este bar')}</strong><small>${t('La ruta a pie solo sale por las calles de Lugo. Desde ahí, mejor con tu app de mapas.')}</small></div>${externalNav(bar)}`;
+  }
+  if (n.following) {
+    return `${head}<div class="ride-hero"><span class="now-label">${t('A pie')}</span><strong class="big-line">${t('Quedan {n} min', { n: minutesFor(n.left) })}</strong><small>${metresText(n.left)} · ${t('El mapa te sigue y la pantalla no se apaga.')}</small></div>
+      <button type="button" class="cta" data-act="nav-stop">${t('Terminar')}</button>`;
+  }
+  return `${head}<div class="ride-hero"><span class="now-label">${t('A pie')}</span><strong class="big-line">${t('{n} min', { n: minutesFor(n.metros) })}</strong><small>${metresText(n.metros)} · ${t('por las calles de Lugo')}</small></div>
+    <button type="button" class="cta brand-btn" data-act="nav-start">${NAV}${t('Empezar')}</button>
+    ${externalNav(bar)}`;
+}
+
 /* ---------- ¿Algo no cuadra? ---------- */
 const REPORT_KINDS = {
   foto: 'La foto no es de una tapa o no es de este bar',
@@ -763,7 +811,8 @@ function render() {
         : view === 'alta' ? altaHTML()
           : view === 'panel' ? panelHTML()
             : view === 'report' ? reportHTML()
-              : homeHTML();
+              : view === 'route' ? routeHTML()
+                : homeHTML();
   const body = $('#sheet-body');
   // Al repintar sin cambiar de pantalla se conserva el desplazamiento y el campo con el foco.
   const focusId = document.activeElement?.id && body.contains(document.activeElement) ? document.activeElement.id : null;
@@ -803,6 +852,14 @@ function route() {
   const raw = decodeURIComponent(location.hash.slice(1));
   const [name, a, b] = raw.split('/');
   if (name !== 'alta' && state.alta?.aiming) state.alta.aiming = false;
+  if (name !== 'ruta' && state.nav) closeNav();
+  if (name === 'ruta' && a) {
+    if (state.nav?.bar !== a) { closeNav(); state.nav = { bar: a, status: 'locating' }; }
+    state.barId = a;
+    setView('route', 'mid');
+    if (state.nav.status === 'locating' && !state.nav.started) startNav();
+    return;
+  }
   if (name === 'bar' && a) {
     if (state.barId !== a) { state.bar = null; state.tapaId = null; }
     if (state.pendingTapa) { state.tapaId = state.pendingTapa; state.pendingTapa = null; }
@@ -854,6 +911,124 @@ function route() {
   }
   state.barId = null;
   setView('home');
+}
+
+/* ---------- Ruta a pie y navegación ---------- */
+let navTools = null;
+async function loadNavTools() {
+  if (navTools) return navTools;
+  const [mod, streets] = await Promise.all([import('./ruta.js'), loadStreets()]);
+  navTools = { mod, g: mod.buildGraph(streets) };
+  return navTools;
+}
+function drawRoute(coords) {
+  if (!mapReady) return;
+  map.getSource('ruta')?.setData({ type: 'FeatureCollection', features: coords?.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }] : [] });
+}
+function fitRoute(coords) {
+  if (!map || !coords?.length) return;
+  const b = new maplibregl.LngLatBounds(coords[0], coords[0]);
+  for (const c of coords) b.extend(c);
+  // fitBounds suma su margen al que ya tiene el mapa: se quita antes para no contarlo dos veces.
+  map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+  const pad = mapPadding();
+  pad.top += 60; // la foto del bar sobresale por encima de su punto
+  map.fitBounds(b, { padding: pad, maxZoom: 17.5, duration: reduced ? 0 : 700 });
+}
+const currentPosition = () => new Promise((resolve, reject) => {
+  if (!navigator.geolocation) { reject(new Error('sin GPS')); return; }
+  navigator.geolocation.getCurrentPosition((p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }), reject, { enableHighAccuracy: true, timeout: 12000, maximumAge: 20000 });
+});
+
+async function startNav() {
+  const n = state.nav;
+  const bar = state.barById.get(n.bar);
+  if (!bar) return; // se vuelve a intentar cuando llegan los datos
+  n.started = true;
+  n.status = 'locating';
+  render();
+  let me;
+  try { me = await currentPosition(); } catch { if (state.nav === n) { n.status = 'nogps'; n.started = false; render(); } return; }
+  if (state.nav !== n) return;
+  state.me = me;
+  updateMap();
+  if (distance(me, bar) > 8000) { n.status = 'far'; render(); return; }
+  let route = null;
+  try {
+    const { mod, g } = await loadNavTools();
+    route = mod.walkRoute(g, [me.lon, me.lat], [bar.lon, bar.lat]);
+  } catch { /* sin callejero: se queda en «lejos» con los botones de fuera */ }
+  if (state.nav !== n) return;
+  if (!route) { n.status = 'far'; render(); return; }
+  Object.assign(n, { status: 'ok', coords: route.coords, metros: route.metros, left: route.metros, rest: route.coords });
+  drawRoute(route.coords);
+  render();
+  // Primero se pinta el panel (cambia de alto) y luego se encuadra la ruta en el hueco que queda.
+  requestAnimationFrame(() => fitRoute(route.coords));
+}
+
+async function keepAwake(n) {
+  try { n.lock = await navigator.wakeLock?.request('screen'); } catch { /* el navegador no deja: no pasa nada */ }
+}
+
+function startFollow() {
+  const n = state.nav;
+  if (!n?.coords) return;
+  n.following = true;
+  keepAwake(n);
+  n.watch = navigator.geolocation?.watchPosition(onMove, (err) => {
+    // Solo se avisa si se quita el permiso; un rato sin señal no es para alarmar.
+    if (err?.code === 1) toast(t('Se ha perdido la ubicación. Sigue con tu app de mapas si hace falta.'), 4000);
+  }, { enableHighAccuracy: true, maximumAge: 3000 });
+  if (state.me) map?.easeTo({ center: [state.me.lon, state.me.lat], zoom: 17.5, padding: mapPadding(), duration: reduced ? 0 : 600 });
+  render();
+}
+
+function onMove(p) {
+  const n = state.nav;
+  if (!n?.following || !navTools) return;
+  const me = { lat: p.coords.latitude, lon: p.coords.longitude };
+  state.me = me;
+  const bar = state.barById.get(n.bar);
+  if (bar && distance(me, bar) < 25) {
+    stopFollow();
+    n.arrived = true;
+    drawRoute(null);
+    navigator.vibrate?.([80, 60, 80]);
+    render();
+    updateMap();
+    return;
+  }
+  const prog = navTools.mod.progressOn(n.coords, me.lon, me.lat);
+  if (prog.off > 40 && Date.now() - (n.recalc ?? 0) > 5000 && bar) {
+    // Se ha salido del camino: ruta nueva desde donde está.
+    n.recalc = Date.now();
+    const route = navTools.mod.walkRoute(navTools.g, [me.lon, me.lat], [bar.lon, bar.lat]);
+    if (route) Object.assign(n, { coords: route.coords, left: route.metros, rest: route.coords });
+  } else {
+    n.left = prog.left;
+    n.rest = prog.rest;
+  }
+  drawRoute(n.rest);
+  updateMap();
+  map?.easeTo({ center: [me.lon, me.lat], zoom: Math.max(map.getZoom(), 16.5), padding: mapPadding(), duration: reduced ? 0 : 800 });
+  if (state.view === 'route') render();
+}
+
+function stopFollow() {
+  const n = state.nav;
+  if (!n) return;
+  if (n.watch != null) navigator.geolocation?.clearWatch(n.watch);
+  n.watch = null;
+  n.following = false;
+  n.lock?.release?.().catch?.(() => {});
+  n.lock = null;
+}
+
+function closeNav() {
+  stopFollow();
+  state.nav = null;
+  drawRoute(null);
 }
 
 async function loadPanel() {
@@ -1048,6 +1223,9 @@ function bindSheet() {
       }
       case 'up-send': sendUpload(); break;
       case 'search-close': closeSearch(); break;
+      case 'nav-start': startFollow(); break;
+      case 'nav-stop': stopFollow(); render(); if (state.nav?.coords) { drawRoute(state.nav.coords); requestAnimationFrame(() => fitRoute(state.nav.coords)); } break;
+      case 'nav-retry': if (state.nav) { state.nav.started = false; startNav(); } break;
       case 'alta-here':
         if (!navigator.geolocation) { toast(t('Este navegador no puede saber dónde estás.')); break; }
         toast(t('Buscando dónde estás…'), 6000);
@@ -1289,7 +1467,11 @@ function start() {
   $('.brand').addEventListener('click', (e) => { e.preventDefault(); go(''); });
   window.addEventListener('hashchange', () => { q.value = ''; state.query = ''; route(); });
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.installPrompt = e; if (state.view === 'panel') render(); });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadToday({ quiet: true }); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    loadToday({ quiet: true });
+    if (state.nav?.following) keepAwake(state.nav);
+  });
   setInterval(() => { if (document.visibilityState === 'visible') loadToday({ quiet: true }); }, 120000);
 
   route();

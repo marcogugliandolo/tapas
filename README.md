@@ -8,6 +8,7 @@ Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil 
 - **Sube tu tapa.** Cualquiera hace la foto de lo que le pusieron con la consumición. El móvil la reduce y le quita la ubicación antes de enviarla, y no sale hasta que se revisa.
 - **Panel del bar.** Cada bar dado de alta tiene un enlace privado: con él sube su tapa en 20 segundos, sale al momento con la marca «Foto del bar» y ve sus votos.
 - **Todos los bares de Lugo.** El servidor descarga una vez al día los bares, cafeterías y restaurantes de OpenStreetMap, así que se puede subir la tapa de cualquiera aunque no se haya dado de alta. Cada uno tiene su botón «¿Es tu bar?».
+- **Cómo llegar a pie** dentro de la propia web: la ruta por las calles de Lugo dibujada en el mapa, con los minutos andando, y «Empezar» para que el mapa te siga hasta el bar sin que se apague la pantalla. También se puede abrir en Google Maps o en Mapas de Apple para que te vayan indicando.
 - **Tus bares** con la estrella, **cerca de ti** con la ubicación, **buscador** de bares y tapas, **compartir** cada bar con un enlace y **modo oscuro**.
 - **Se instala como una app** y abre sin cobertura con lo último que vio.
 - **Sin cuenta, sin cookies de seguimiento y sin publicidad.** Lo explica la página de [privacidad](app/privacidad/index.html).
@@ -63,7 +64,7 @@ node tools/servidor-local.mjs        # http://localhost:8080/   (PUERTO=…, OSM
 
 Sirve la web y la API como en el servidor y guarda los datos en `.datos-locales/`. La dirección de la moderación sale al arrancar.
 
-Pruebas de la API: `cd server && node --test`. Textos sin traducir: `node tools/check-i18n.mjs`.
+Pruebas de la API: `cd server && node --test`. Rutas a pie: `node tools/check-ruta.mjs`. Textos sin traducir: `node tools/check-i18n.mjs`.
 
 ## La API (`server/`)
 
@@ -103,8 +104,9 @@ app/index.html, style.css        la página
 app/app.js                       mapa, pantallas, subir fotos, panel del bar
 app/i18n.js                      castellano y gallego
 app/demo.js                      el modo de ejemplo (/?ejemplo)
+app/ruta.js                      rutas a pie por el callejero (lo comprueba tools/check-ruta.mjs)
 app/sw.js                        la web sin cobertura y las fotos guardadas
-app/data/                        estilo del mapa y calles de Lugo para cuando no hay mapa de fuera
+app/data/                        estilo del mapa y calles de Lugo (para el mapa sin conexión y para las rutas a pie)
 app/vendor/                      MapLibre y tipografías, sin CDN
 app/privacidad, privacidade      generadas por tools/privacidad.mjs
 server/api.mjs                   la API
