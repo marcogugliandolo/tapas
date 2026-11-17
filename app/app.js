@@ -7,7 +7,12 @@ import { t, getLang, setLang, translateDom } from './i18n.js';
 const API = '/api';
 const CENTER = [-7.5566, 43.0108];
 const TILES_CHECK = 'https://tiles.openfreemap.org/planet';
+// /?ejemplo: todo de ejemplo y no se envía nada (para enseñarla sin tocar nada de verdad).
 const DEMO = /[?&](ejemplo|exemplo)\b/.test(location.search);
+// Mientras los bares empiezan a subir sus tapas, la portada pone tapas de ejemplo en los que aún no
+// tienen. Cuando un bar sube la suya, la de verdad sustituye al ejemplo. /?real la enseña sin ejemplos.
+const EJEMPLOS_EN_PORTADA = true;
+const EJEMPLOS = DEMO || (EJEMPLOS_EN_PORTADA && !/[?&]real\b/.test(location.search));
 const MAX_SIDE = 1280;
 const MINI_SIDE = 240;
 
@@ -123,24 +128,32 @@ function apply(data) {
   store.set('quetapa-notas', state.notas);
 }
 
+/** Los datos del servidor con las tapas de ejemplo puestas en los bares que no tienen. */
+async function withExamples(data) {
+  if (!EJEMPLOS) return data;
+  try {
+    const { demoData } = await import('./demo.js');
+    return demoData(data.bares ?? [], { tapasReales: DEMO ? [] : data.tapas ?? [], fecha: data.fecha, notas: state.notas });
+  } catch { return data; }
+}
+
 async function loadToday({ quiet = false } = {}) {
   if (DEMO) {
-    const { demoData } = await import('./demo.js');
     // Con los bares de verdad del servidor, los del ejemplo salen en su sitio exacto.
-    let reales = [];
-    try { const res = await fetch(`${API}/hoy`, { cache: 'no-store' }); if (res.ok) reales = (await res.json()).bares ?? []; } catch { /* sin servidor: posiciones aproximadas */ }
-    apply(demoData(reales));
+    let bares = [];
+    try { const res = await fetch(`${API}/hoy`, { cache: 'no-store' }); if (res.ok) bares = (await res.json()).bares ?? []; } catch { /* sin servidor: posiciones aproximadas */ }
+    apply(await withExamples({ bares, tapas: [] }));
   } else {
     try {
       const res = await fetch(`${API}/hoy`, { cache: 'no-store' });
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
-      apply(data);
+      apply(await withExamples(data));
       state.offline = false;
       store.set('quetapa-hoy', data);
     } catch {
       const saved = store.get('quetapa-hoy', null);
-      if (saved && !state.loaded) apply(saved);
+      if (saved && !state.loaded) apply(await withExamples(saved));
       state.offline = true;
       state.loaded = true;
     }
@@ -158,7 +171,9 @@ async function loadBar(id) {
     const res = await fetch(`${API}/bar/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      if (state.barId === id) state.bar = data;
+      // Un bar sin tapas de verdad se queda con las de ejemplo que ya tenía.
+      const examples = state.tapas.filter((x) => x.bar === id && x.autor === 'ejemplo');
+      if (state.barId === id) state.bar = !data.tapas?.length && examples.length ? { bar: state.barById.get(id) ?? data.bar, tapas: examples } : data;
       if (!state.barById.has(id)) state.barById.set(id, data.bar);
     }
   } catch { /* con lo de la portada vale */ }
@@ -514,7 +529,11 @@ function langSwitch() {
 const MOSTRAR_ALTA = false;
 // Las tapas las suben los bares desde su panel; quien entra en la web solo las mira y las puntúa.
 const SUBEN_CLIENTES = false;
-const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Bares de Lugo con tapas de muestra para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>` : '');
+const demoBanner = (show = DEMO) => {
+  if (DEMO) return `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Bares de Lugo con tapas de muestra para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>`;
+  if (!show) return '';
+  return `<p class="notice-item">${INFO}<span><strong>${t('Tapas de ejemplo.')}</strong> ${t('Mientras los bares empiezan a subir las suyas, las marcadas como «Ejemplo» son de muestra: las fotos son dibujos y las notas, inventadas.')}</span></p>`;
+};
 const tip = (icon, text) => `<li><span class="tip-icon">${icon}</span><span>${text}</span></li>`;
 const nowCard = ({ act, to = '', bar = '', icon, label = '', title, sub = '', line = false }) => `<button type="button" class="now${line ? ' line' : ''}" data-act="${act}"${to !== '' ? ` data-to="${esc(to)}"` : ''}${bar ? ` data-bar="${esc(bar)}"` : ''}><span class="now-icon">${icon}</span><span class="now-text">${label ? `<span class="now-label">${label}</span>` : ''}<strong>${title}</strong>${sub ? `<small>${sub}</small>` : ''}</span><span class="now-go" aria-hidden="true">›</span></button>`;
 
@@ -590,7 +609,7 @@ function homeHTML() {
   const lastDays = older.length && today.length < 6 ? `<section class="section"><h2>${t('Estos días')}</h2><div class="reel">${older.slice(0, 12).map(card).join('')}</div></section>` : '';
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
-  return `${title}${demoBanner()}${offline}${myBar}${main}${podium}${near}${favs}${lastDays}${promo}
+  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${main}${podium}${near}${favs}${lastDays}${promo}
     <ul class="tips">${tip(STAR, t('Puntúa las tapas que pruebes: las mejor valoradas salen arriba.'))}${state.favs.length ? '' : tip(BOOKMARK, t('Guarda tus bares y los verás aquí al abrir.'))}</ul>
     ${langSwitch()}${foot()}`;
 }
@@ -640,7 +659,7 @@ function barHTML() {
 
   const claim = MOSTRAR_ALTA && !bar.reg && !owner ? nowCard({ act: 'go', to: `alta/${bar.id}`, icon: STORE, title: t('¿Es tu bar?'), sub: t('Sube tú la tapa cada día y sal destacado en el mapa. Gratis.'), line: true }) : '';
 
-  return `${headHTML}${demoBanner()}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
+  return `${headHTML}${demoBanner(tapa?.autor === 'ejemplo')}${body}${actions}${grid}${claim}${foot({ bar: bar.id, tapa: tapa?.id ?? '' })}`;
 }
 const shortDate = (fecha) => { const d = new Date(`${fecha}T12:00:00Z`); return `${d.getUTCDate()} ${MESES[getLang()][d.getUTCMonth()].slice(0, 3)}`; };
 
@@ -1187,7 +1206,7 @@ async function rate(id, nota) {
   store.set('quetapa-notas', state.notas);
   navigator.vibrate?.(15);
   render();
-  if (DEMO) return;
+  if (DEMO || tapa.autor === 'ejemplo') return; // las notas a tapas de ejemplo solo cuentan en este móvil
   try {
     const res = await postJSON('/voto', { tapa: id, nota });
     for (const x of new Set(all)) Object.assign(x, { votos: res.votos, media: res.media });

@@ -2,11 +2,11 @@
 // Con conexión siempre se pide la versión nueva (y se guarda); sin conexión, o si la red tarda
 // demasiado, se sirve la guardada. Las fotos no cambian nunca: se guardan aparte y se sirven de ahí.
 
-const CACHE = 'quetapa-v6';
+const CACHE = 'quetapa-v7';
 const FOTOS = 'quetapa-fotos-v1';
 const MAX_FOTOS = 150;
 const CORE = [
-  './', 'index.html', 'style.css', 'app.js', 'i18n.js', 'ruta.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png',
+  './', 'index.html', 'style.css', 'app.js', 'i18n.js', 'ruta.js', 'demo.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png',
   'vendor/maplibre-gl.js', 'vendor/maplibre-gl.css',
   'vendor/fonts/atkinson-hyperlegible-next-latin-400-normal.woff2',
   'vendor/fonts/atkinson-hyperlegible-next-latin-700-normal.woff2',

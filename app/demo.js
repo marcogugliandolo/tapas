@@ -1,5 +1,6 @@
-// Que Tapa!: el modo de ejemplo (/?ejemplo), para enseñar la web llena antes de que los bares
-// suban nada. Salen bares de Lugo: unos con tapas que se conocen por artículos publicados (Guía
+// Que Tapa!: las tapas de ejemplo, para enseñar la web llena antes de que los bares suban nada.
+// Salen en la portada en los bares que aún no tienen tapa de verdad (la de verdad siempre gana) y
+// en /?ejemplo, que es todo de ejemplo y no envía nada. Salen bares de Lugo: unos con tapas que se conocen por artículos publicados (Guía
 // Repsol, Planomato) y otros con tapas típicas puestas de ejemplo. Las «fotos» son dibujos y las
 // notas y las horas, inventadas. La web lo avisa arriba y cada tapa lleva la marca «Ejemplo».
 //
@@ -82,23 +83,31 @@ const madridDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/M
 /** Un número «al azar» entre 0 y 1, pero siempre el mismo para el mismo texto: así el ejemplo no baila. */
 const azar = (texto) => { let h = 2166136261; for (const c of String(texto)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; return (h >>> 0) / 4294967296; };
 
-/** Los datos de ejemplo. `reales` son los bares que manda el servidor (pueden no venir). */
-export function demoData(reales = []) {
+/**
+ * Los datos con ejemplos. `reales` son los bares que manda el servidor (pueden no venir) y
+ * `tapasReales`, sus tapas: los bares que ya tienen alguna se quedan solo con las suyas.
+ * `notas` son las que puso esta persona a tapas de ejemplo, que solo cuentan en su móvil.
+ */
+export function demoData(reales = [], { tapasReales = [], fecha: fechaServidor = '', notas = {} } = {}) {
   const now = Date.now();
-  const fecha = madridDay(now - 5 * 3600000);
+  const fecha = fechaServidor || madridDay(now - 5 * 3600000);
+  const conReales = new Set(tapasReales.map((x) => x.bar));
   const dayBefore = (n) => madridDay(now - 5 * 3600000 - n * 86400000);
   const usados = new Set();
   const conTapas = []; // [{ bar, tapas }]
 
   for (const b of BARES) {
-    const real = reales.find((r) => !usados.has(r.id) && b.busca.test(norm(r.nombre)));
+    const real = reales.find((r) => !usados.has(r.id) && b.busca.test(norm(r.nombre)) && !NO_TAPAS.test(norm(r.nombre)));
     if (real) usados.add(real.id);
-    conTapas.push({ bar: real ? { ...real, reg: false } : { id: `ejemplo-${b.id}`, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir, reg: false }, tapas: b.tapas });
+    if (real && conReales.has(real.id)) continue;
+    // Sin los bares del servidor, el bar sale en su posición aproximada.
+    if (!real && reales.length) continue;
+    conTapas.push({ bar: real ? { ...real } : { id: `ejemplo-${b.id}`, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir, reg: false }, tapas: b.tapas });
   }
 
   // Casi todos los demás bares de verdad, con una tapa típica que depende del bar.
   for (const r of reales) {
-    if (usados.has(r.id) || NO_TAPAS.test(norm(r.nombre)) || azar(`${r.id}-sin`) < SIN_TAPA) continue;
+    if (usados.has(r.id) || conReales.has(r.id) || NO_TAPAS.test(norm(r.nombre)) || azar(`${r.id}-sin`) < SIN_TAPA) continue;
     usados.add(r.id);
     const pick = (clave) => TIPICAS[Math.floor(azar(`${r.id}-${clave}`) * TIPICAS.length)];
     const hoy = pick('hoy');
@@ -109,7 +118,7 @@ export function demoData(reales = []) {
     const lista = dias < 0.85 ? [hoy] : [null, hoy];
     if (dias > 0.97) lista.unshift(null);
     if (azar(`${r.id}-historia`) < 0.35) lista.push(antes);
-    conTapas.push({ bar: { ...r, reg: false }, tapas: lista });
+    conTapas.push({ bar: { ...r }, tapas: lista });
   }
 
   const tapas = [];
@@ -122,10 +131,15 @@ export function demoData(reales = []) {
       const clave = `${bar.id}-${dias}`;
       // Hoy: subida entre hace 10 minutos y hace 4 horas; días atrás, a media mañana.
       const ago = dias ? dias * 1440 + 60 + Math.round(azar(`${clave}-h`) * 120) : 10 + Math.round(azar(`${clave}-h`) * 230);
+      // El id sale del bar y del día, para que la nota que pongas siga en su sitio al recargar.
+      const id = `ejemplo-${bar.id}-${dias}`;
+      let votos = 3 + Math.round(azar(`${clave}-v`) * 34);
+      let media = Math.round((3.5 + azar(`${clave}-m`) * 1.4) * 10) / 10;
+      const mia = notas[id]?.nota;
+      if (mia) { media = (media * votos + mia) / (votos + 1); votos += 1; }
       tapas.push({
-        id: `ejemplo-t${n}`, bar: bar.id, fecha: dias ? dayBefore(dias) : fecha, at: new Date(now - ago * 60000).toISOString(),
-        nombre, tipos, nota: '', autor: 'ejemplo',
-        votos: 3 + Math.round(azar(`${clave}-v`) * 34), media: Math.round((3.5 + azar(`${clave}-m`) * 1.4) * 10) / 10,
+        id, bar: bar.id, fecha: dias ? dayBefore(dias) : fecha, at: new Date(now - ago * 60000).toISOString(),
+        nombre, tipos, nota: '', autor: 'ejemplo', votos, media,
         img: dibujo(emoji, n), mini: dibujo(emoji, n, true),
       });
     });
@@ -138,7 +152,8 @@ export function demoData(reales = []) {
     const votos = suyas.reduce((s, x) => s + x.votos, 0);
     if (votos) Object.assign(b, { votos, media: Math.round((suyas.reduce((s, x) => s + x.media * x.votos, 0) / votos) * 10) / 10 });
   }
-  // El resto de bares de verdad salen como puntos, igual que en la web normal.
-  for (const r of reales) if (!usados.has(r.id)) bares.push({ ...r, reg: false });
-  return { fecha, bares, tapas };
+  // El resto de bares de verdad, tal cual (con sus tapas de verdad si las tienen).
+  const puestos = new Set(bares.map((b) => b.id));
+  for (const r of reales) if (!puestos.has(r.id)) bares.push(r);
+  return { fecha, bares, tapas: [...tapasReales, ...tapas] };
 }

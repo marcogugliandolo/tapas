@@ -14,7 +14,7 @@ Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil 
 - **Se instala como una app** y abre sin cobertura con lo último que vio.
 - **Sin cuenta, sin cookies de seguimiento y sin publicidad.** Lo explica la página de [privacidad](app/privacidad/index.html).
 
-Para enseñarla llena antes de tener tapas de verdad: **`/?ejemplo`** pinta bares de Lugo con tapas de muestra: unos con su tapa conocida (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica, A Xarra…) y, si el servidor ya tiene los bares de OpenStreetMap, casi todos los demás bares de Lugo con una tapa típica (siempre la misma para cada bar; uno de cada diez se queda sin tapa para ver cómo queda, y las pizzerías, japoneses o heladerías no llevan). Las fotos son dibujos, las notas son inventadas y la web avisa arriba de que es un ejemplo. No envía nada.
+**Tapas de ejemplo en la portada.** Mientras los bares empiezan a subir las suyas, la web pone una tapa de ejemplo en casi todos los bares que aún no tienen tapa de verdad: unos con su tapa conocida (Taberna Daniel, Las Cinco Vigas, 4 Rúas, La Nuez, Cervecería Lagar, A Adega, Paprica, A Xarra…) y el resto con una tapa típica (siempre la misma para cada bar; uno de cada diez se queda sin tapa, y las pizzerías, japoneses o heladerías no llevan). Llevan la marca «Ejemplo», la portada avisa arriba, sus fotos son dibujos y las notas que se les ponen solo cuentan en ese móvil. En cuanto un bar sube su tapa, la de verdad sustituye al ejemplo. Para apagarlo: `EJEMPLOS_EN_PORTADA = false` en `app/app.js`. Para ver solo lo de verdad: **`/?real`**. Y **`/?ejemplo`** es todo de ejemplo y no envía nada (ni subidas, ni notas, ni altas).
 
 ## Desplegar en Portainer
 

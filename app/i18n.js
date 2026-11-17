@@ -28,6 +28,8 @@ export const GL = {
   "Modo de ejemplo.": "Modo de exemplo.",
   "Bares de Lugo con tapas de muestra para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.": "Bares de Lugo con tapas de mostra para ver como queda: as fotos son debuxos e as notas, inventadas. Non o subiu ningún bar e non se envía nada.",
   "Ejemplo": "Exemplo",
+  "Tapas de ejemplo.": "Tapas de exemplo.",
+  "Mientras los bares empiezan a subir las suyas, las marcadas como «Ejemplo» son de muestra: las fotos son dibujos y las notas, inventadas.": "Mentres os bares empezan a subir as súas, as marcadas como «Exemplo» son de mostra: as fotos son debuxos e as notas, inventadas.",
   "tapas más": "tapas máis",
   "Ver todas": "Ver todas",
   "Esta es la última que subió. Cuando suba la de hoy, saldrá aquí.": "Esta é a última que subiu. Cando suba a de hoxe, sairá aquí.",
