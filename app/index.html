@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Que Tapa! · Las tapas de Lugo, hoy</title>
+<meta name="description" content="Qué tapa ponen hoy en cada bar de Lugo, con foto. Vota las mejores, guarda tus bares y sube la tuya. En castellano y en gallego.">
+<meta name="theme-color" content="#F0431C">
+<link rel="canonical" href="https://tapas.marcogugliandolo.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Que Tapa! · Las tapas de Lugo, hoy">
+<meta property="og:description" content="El mapa de las tapas de Lugo: qué ponen hoy en cada bar, con foto. Vota las mejores y sube la tuya.">
+<meta property="og:image" content="https://tapas.marcogugliandolo.com/og.png">
+<meta property="og:url" content="https://tapas.marcogugliandolo.com/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+<script>try { var l = localStorage.getItem('quetapa-lingua'); if (l === 'gl' || (!l && /^gl\b/i.test(navigator.language || ''))) document.documentElement.lang = 'gl'; var th = localStorage.getItem('quetapa-tema'); if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th; } catch (e) {}</script>
+</head>
+<body data-view="home">
+<div id="map" data-t-label="Mapa de Lugo con las tapas de hoy" aria-label="Mapa de Lugo con las tapas de hoy"></div>
+<p id="nomap" hidden data-t="Tu navegador no puede dibujar el mapa. Las tapas y los bares funcionan igual.">Tu navegador no puede dibujar el mapa. Las tapas y los bares funcionan igual.</p>
+<div id="aim" hidden aria-hidden="true"><span></span></div>
+
+<aside class="side">
+  <a class="brand" href="./" data-act="home"><img src="icon.svg" width="34" height="34" alt=""><span>Que Tapa!</span></a>
+  <div class="top">
+    <label class="search" for="q">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      <span class="sr" data-t="Buscar un bar o una tapa">Buscar un bar o una tapa</span>
+      <input id="q" type="search" placeholder="Busca un bar o una tapa" data-t-placeholder="Busca un bar o una tapa" autocomplete="off" enterkeyhint="search">
+    </label>
+    <button type="button" id="theme" class="round"></button>
+  </div>
+  <section id="sheet" data-size="mid" data-t-label="Información" aria-label="Información">
+    <button type="button" id="grab" data-t-label="Cambiar el tamaño del panel" aria-label="Cambiar el tamaño del panel"><span></span></button>
+    <div id="sheet-body"></div>
+  </section>
+</aside>
+
+<button type="button" id="snap" class="snap"><span aria-hidden="true">📸</span><b data-t="Sube tu tapa">Sube tu tapa</b></button>
+<button type="button" id="locate" class="round" data-t-label="Ver los bares cerca de mí" aria-label="Ver los bares cerca de mí">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3 3 7.5z"></path></svg>
+</button>
+<div class="zoom">
+  <button type="button" id="zoom-in" data-t-label="Acercar" aria-label="Acercar">+</button>
+  <button type="button" id="zoom-out" data-t-label="Alejar" aria-label="Alejar">−</button>
+</div>
+<button type="button" id="credit" data-t-label="Créditos del mapa" aria-label="Créditos del mapa">i</button>
+<div id="toast" role="status" hidden></div>
+<input id="file-camera" type="file" accept="image/*" capture="environment" hidden>
+<input id="file-gallery" type="file" accept="image/*" hidden>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

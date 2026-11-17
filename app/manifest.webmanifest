@@ -1,0 +1,17 @@
+{
+  "name": "Que Tapa! · Las tapas de Lugo",
+  "short_name": "Que Tapa!",
+  "description": "Qué tapa ponen hoy en cada bar de Lugo, con foto.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF6EC",
+  "theme_color": "#F0431C",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "que-tapa-api",
+  "private": true,
+  "type": "module",
+  "main": "api.mjs",
+  "scripts": {
+    "start": "node api.mjs",
+    "test": "node --test"
+  }
+}
