@@ -532,7 +532,8 @@ function homeHTML() {
     main = `<div class="ride-hero"><strong class="big-line">${t('Aún no hay tapas hoy')}</strong><small>${t('¿Estás de viños? Hazle una foto a la tapa que te pongan y sé el primero del día.')}</small></div>
       <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
   } else {
-    main = `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}`;
+    main = `${filters}<div class="reel">${list.map(card).join('')}</div>${list.length ? '' : `<p class="empty">${t('Hoy no hay tapas de este tipo todavía.')}</p>`}
+      <button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>`;
   }
 
   const ranked = [...today].filter((x) => x.fuegos > 0).sort((a, b) => b.fuegos - a.fuegos || a.at.localeCompare(b.at)).slice(0, 3);
@@ -1274,7 +1275,6 @@ function start() {
   bindSheet();
   bindSheetDrag();
   $('#theme').addEventListener('click', () => setTheme(isDark() ? 'light' : 'dark'));
-  $('#upload-btn').addEventListener('click', () => go(state.view === 'bar' && state.barId ? `subir/${state.barId}` : 'subir'));
   $('#locate').addEventListener('click', locate);
   $('#zoom-in').addEventListener('click', () => map?.zoomIn());
   $('#zoom-out').addEventListener('click', () => map?.zoomOut());
