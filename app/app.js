@@ -510,6 +510,8 @@ function langSwitch() {
   const lang = getLang();
   return `<div class="lang" role="group" aria-label="${t('Idioma')}"><button type="button" data-act="lang" data-lang="es" aria-pressed="${lang === 'es'}">Castellano</button><button type="button" data-act="lang" data-lang="gl" aria-pressed="${lang === 'gl'}">Galego</button></div>`;
 }
+// La tarjeta «¿Tienes un bar?» del inicio, oculta de momento. La página de alta sigue en /#alta.
+const MOSTRAR_ALTA = false;
 const demoBanner = () => (DEMO ? `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Tapas conocidas de bares de Lugo para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>` : '');
 const tip = (icon, text) => `<li><span class="tip-icon">${icon}</span><span>${text}</span></li>`;
 const nowCard = ({ act, to = '', bar = '', icon, label = '', title, sub = '', line = false }) => `<button type="button" class="now${line ? ' line' : ''}" data-act="${act}"${to !== '' ? ` data-to="${esc(to)}"` : ''}${bar ? ` data-bar="${esc(bar)}"` : ''}><span class="now-icon">${icon}</span><span class="now-text">${label ? `<span class="now-label">${label}</span>` : ''}<strong>${title}</strong>${sub ? `<small>${sub}</small>` : ''}</span><span class="now-go" aria-hidden="true">›</span></button>`;
@@ -573,7 +575,7 @@ function homeHTML() {
   const favs = favBars.length ? `<section class="rows"><h2>${t('Tus bares')}</h2>${favBars.map((b) => barRow(b)).join('')}</section>` : '';
 
   const myBar = state.mine ? nowCard({ act: 'go', to: 'panel', icon: STORE, label: t('Tu bar'), title: esc(state.barById.get(state.mine.bar)?.nombre ?? state.mine.nombre ?? ''), sub: t('Sube la tapa de hoy y mira tus notas') }) : '';
-  const promo = state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
+  const promo = !MOSTRAR_ALTA || state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
 
   const lastDays = older.length && today.length < 6 ? `<section class="section"><h2>${t('Estos días')}</h2><div class="reel">${older.slice(0, 12).map(card).join('')}</div></section>` : '';
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
