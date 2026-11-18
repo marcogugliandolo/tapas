@@ -571,8 +571,9 @@ const followBtn = (bar, big = false) => {
     : `<button type="button" class="follow${on ? ' on' : ''}" data-act="follow" data-bar="${esc(bar.id)}" aria-pressed="${on}">${on ? t('Siguiendo') : t('Seguir')}</button>`;
 };
 
-/** Una publicación del muro: el bar, la foto grande, las estrellas y el texto. */
-function post(tapa) {
+/** Una publicación del muro: el bar, la foto grande, las estrellas y el texto. `older` son sus
+ * tapas de días anteriores, que en «Siguiendo» salen en pequeño debajo en vez de repetir el bar. */
+function post(tapa, older = []) {
   const bar = state.barById.get(tapa.bar);
   if (!bar) return '';
   const mine = state.notas[tapa.id]?.nota ?? 0;
@@ -591,6 +592,7 @@ function post(tapa) {
       ${tapa.votos ? `<small class="post-score">${STAR_FILL}<b>${fmtMedia(tapa.media)}</b> ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}${mine ? ` · ${t('la tuya: {n}', { n: mine })}` : ''}</small>` : ''}
       ${tapa.nota ? `<p>${esc(tapa.nota)}</p>` : ''}
     </div>
+    ${older.length ? `<div class="older"><small>${t('Sus tapas de estos días')}</small><div class="older-list">${older.map((x) => `<button type="button" data-act="open-tapa" data-bar="${esc(bar.id)}" data-tapa="${esc(x.id)}"><img src="${esc(src(x, true))}" alt="" loading="lazy"><span><b>${esc(shortDate(x.fecha))}</b>${esc(x.nombre)}</span></button>`).join('')}</div></div>` : ''}
   </article>`;
 }
 
@@ -643,10 +645,19 @@ function homeHTML() {
   } else if (!list.length) {
     feed = `<p class="empty">${following ? t('Los bares que sigues no han subido tapas estos días.') : pool.length ? t('Hoy no hay tapas de este tipo todavía.') : ''}</p>`;
   } else {
-    const shown = list.slice(0, state.feedN);
+    // En «Siguiendo», una publicación por bar: su última tapa y las anteriores en pequeño.
+    let groups;
+    if (following) {
+      const byBar = new Map();
+      const recent = [...list].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.at.localeCompare(a.at));
+      for (const x of recent) (byBar.get(x.bar) ?? byBar.set(x.bar, []).get(x.bar)).push(x);
+      groups = [...byBar.values()];
+      if (state.filter === 'top') groups.sort((a, b) => byRating(a[0], b[0]));
+    } else groups = list.map((x) => [x]);
+    const shown = groups.slice(0, state.feedN);
     const olderNote = !following && !today.length ? `<p class="note">${t('Hoy aún no hay tapas: estas son de los últimos días.')}</p>` : '';
-    feed = `${olderNote}<div class="feed">${shown.map(post).join('')}</div>
-      ${list.length > shown.length ? `<button type="button" class="cta second" data-act="more">${t('Ver más tapas')} <span class="n">${list.length - shown.length}</span></button>` : ''}`;
+    feed = `${olderNote}<div class="feed">${shown.map(([first, ...rest]) => post(first, rest)).join('')}</div>
+      ${groups.length > shown.length ? `<button type="button" class="cta second" data-act="more">${following ? t('Ver más bares') : t('Ver más tapas')} <span class="n">${groups.length - shown.length}</span></button>` : ''}`;
   }
   const upload = SUBEN_CLIENTES && state.loaded ? `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>` : '';
 

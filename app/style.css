@@ -84,7 +84,7 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 #grab { flex: none; display: grid; place-items: center; width: 100%; height: 32px; cursor: grab; padding: 0; border: 0; background: transparent; touch-action: none; }
 #grab span { width: 40px; height: 4px; border-radius: 2px; background: var(--grab); }
 #sheet-body > * { flex-shrink: 0; }
-#sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 max(20px, env(safe-area-inset-right, 0px)) 12px max(20px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 16px; }
+#sheet-body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 0 max(20px, env(safe-area-inset-right, 0px)) 12px max(20px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 16px; }
 
 .eyebrow { display: flex; align-items: center; gap: 7px; font-size: var(--t-note); color: var(--mute); margin-bottom: -4px; }
 .eyebrow img { border-radius: 6px; }
@@ -99,7 +99,7 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .notice-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); color: var(--warn-fg); font-size: var(--t-note); line-height: 1.35; }
 
 /* Filtros */
-.filters { display: flex; gap: 6px; margin: 0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); padding: 0 max(20px, env(safe-area-inset-left, 0px)); overflow-x: auto; scrollbar-width: none; }
+.filters { display: flex; overscroll-behavior-x: contain; gap: 6px; margin: 0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); padding: 0 max(20px, env(safe-area-inset-left, 0px)); overflow-x: auto; scrollbar-width: none; }
 .filters::-webkit-scrollbar { display: none; }
 .filters button { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 14px; border: 0; border-radius: 20px; background: var(--soft); font-size: var(--t-note); font-weight: 700; white-space: nowrap; }
 .filters button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
@@ -113,7 +113,7 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 /* ---------- Red social: avatares, historias, pestañas, muro y perfil ---------- */
 .avatar { flex: none; display: grid; place-items: center; width: var(--av, 40px); height: var(--av, 40px); border-radius: 50%; font-family: var(--display); font-size: calc(var(--av, 40px) * .38); font-weight: 700; letter-spacing: -.02em; line-height: 1; user-select: none; }
 
-.stories { display: flex; gap: 12px; margin: 0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); padding: 2px max(20px, env(safe-area-inset-left, 0px)) 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.stories { display: flex; overscroll-behavior-x: contain; gap: 12px; margin: 0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); padding: 2px max(20px, env(safe-area-inset-left, 0px)) 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
 .stories::-webkit-scrollbar { display: none; }
 .story { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 72px; padding: 0; border: 0; background: transparent; scroll-snap-align: start; }
 .story .ring { display: block; width: 68px; height: 68px; padding: 3px; border-radius: 50%; background: conic-gradient(from 210deg, #FFC400, var(--brand), #FF8A3C, #FFC400); }
@@ -154,6 +154,14 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .post-text .post-score b { color: var(--ink); }
 .post-text .post-score svg { width: 13px; height: 13px; fill: var(--star); stroke: #B07F00; stroke-width: 1.2; }
 .post-text p { margin-top: 4px; font-size: var(--t-note); line-height: 1.4; }
+.older { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+.older > small { font-size: var(--t-label); font-weight: 700; color: var(--mute); }
+.older-list { display: flex; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.older-list::-webkit-scrollbar { display: none; }
+.older-list button { flex: none; display: flex; flex-direction: column; gap: 4px; width: 76px; padding: 0; border: 0; background: transparent; text-align: left; }
+.older-list img { width: 76px; height: 76px; border-radius: 12px; object-fit: cover; background: var(--soft); }
+.older-list span { font-size: 12px; line-height: 1.25; color: var(--mute); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.older-list b { display: block; color: var(--ink); font-weight: 700; }
 .feed-empty { display: grid; justify-items: center; gap: 6px; padding: 26px 16px; border-radius: 16px; background: var(--soft); text-align: center; color: var(--mute); font-size: var(--t-note); line-height: 1.4; }
 .feed-empty svg { width: 30px; height: 30px; color: var(--ink); }
 .feed-empty strong { color: var(--ink); font-size: var(--t-body); }
@@ -163,14 +171,6 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .profile-stats b { display: inline-flex; align-items: center; justify-content: center; gap: 3px; font-family: var(--display); font-size: 21px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .profile-stats b svg { width: 16px; height: 16px; fill: var(--star); stroke: #B07F00; stroke-width: 1.2; }
 .profile-stats small { display: block; font-size: var(--t-label); color: var(--mute); }
-
-.row .avatar { margin-right: 2px; }
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-.grid button { position: relative; padding: 0; border: 0; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--soft); }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.stats .stat { padding: 12px; }
-  .filters, .stories { margin: 0 -24px; padding-left: 24px; padding-right: 24px; scroll-padding: 0 24px; }
-  .pin,   .stars button[aria-pressed="true"] svg { animation: none; }
 
 .rows { display: flex; flex-direction: column; }
 .rows h2 { padding-bottom: 4px; font-size: var(--t-note); font-weight: 700; color: var(--mute); }

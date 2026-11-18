@@ -28,6 +28,8 @@ export const GL = {
   "Modo de ejemplo.": "Modo de exemplo.",
   "Bares de Lugo con tapas de muestra para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.": "Bares de Lugo con tapas de mostra para ver como queda: as fotos son debuxos e as notas, inventadas. Non o subiu ningún bar e non se envía nada.",
   "Ejemplo": "Exemplo",
+  "Sus tapas de estos días": "As súas tapas destes días",
+  "Ver más bares": "Ver máis bares",
   "Bar": "Bar",
   "Pub": "Pub",
   "Cafetería": "Cafetaría",
