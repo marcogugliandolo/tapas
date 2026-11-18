@@ -584,22 +584,15 @@ const followBtn = (bar, big = false) => {
 function post(tapa) {
   const bar = state.barById.get(tapa.bar);
   if (!bar) return '';
-  const mine = state.notas[tapa.id]?.nota ?? 0;
-  const tipos = (tapa.tipos ?? []).filter((k) => TIPOS[k]).map(tipoLabel).join(' · ');
-  const tag = tapa.autor === 'ejemplo' ? `<span class="tag">${t('Ejemplo')}</span>` : tapa.autor === 'bar' ? `<span class="tag">${CHECK}${t('Foto del bar')}</span>` : '';
-  const stars = canRate(tapa) ? `<div class="mini-stars" role="group" aria-label="${t('Tu nota')}">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= mine ? 'on' : ''}" data-act="rate" data-tapa="${esc(tapa.id)}" data-nota="${n}" aria-pressed="${n === mine}" aria-label="${plural(n, '1 estrella', '{n} estrellas')}">${STAR}</button>`).join('')}</div>` : '<span></span>';
+  const when = isToday(tapa) ? ago(tapa) : `${shortDate(tapa.fecha)}`;
   return `<article class="post">
     <div class="post-head">
-      <button type="button" class="who" data-act="open-bar" data-bar="${esc(bar.id)}">${avatar(bar)}<span><strong>${esc(bar.nombre)}</strong><small>${esc(isToday(tapa) ? ago(tapa) : `${shortDate(tapa.fecha)} · ${ago(tapa)}`)}${bar.dir ? ` · ${esc(bar.dir)}` : ''}</small></span></button>
+      <button type="button" class="who" data-act="open-bar" data-bar="${esc(bar.id)}">${avatar(bar)}<span><strong>${esc(bar.nombre)}</strong><small>${esc(when)}</small></span></button>
       ${followBtn(bar)}
     </div>
-    <button type="button" class="post-photo" data-act="open-tapa" data-bar="${esc(bar.id)}" data-tapa="${esc(tapa.id)}" aria-label="${esc(tapa.nombre)} · ${esc(bar.nombre)}"><img src="${esc(src(tapa))}" alt="" loading="lazy" decoding="async">${tag ? `<span class="tags">${tag}</span>` : ''}</button>
-    <div class="post-actions">${stars}<button type="button" class="icon-btn" data-act="share-bar" data-bar="${esc(bar.id)}" aria-label="${t('Compartir')}" title="${t('Compartir')}">${SHARE}</button></div>
-    <div class="post-text">
-      <strong>${esc(tapa.nombre)}</strong>${tipos ? `<small>${esc(tipos)}</small>` : ''}
-      ${tapa.votos ? `<small class="post-score">${STAR_FILL}<b>${fmtMedia(tapa.media)}</b> ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}${mine ? ` · ${t('la tuya: {n}', { n: mine })}` : ''}</small>` : ''}
-      ${tapa.nota ? `<p>${esc(tapa.nota)}</p>` : ''}
-    </div>
+    <button type="button" class="post-photo" data-act="open-tapa" data-bar="${esc(bar.id)}" data-tapa="${esc(tapa.id)}" aria-label="${esc(tapa.nombre)} · ${esc(bar.nombre)}"><img src="${esc(src(tapa))}" alt="" loading="lazy" decoding="async">${tapa.autor === 'ejemplo' ? `<span class="tags"><span class="tag">${t('Ejemplo')}</span></span>` : ''}</button>
+    <div class="post-line"><strong>${esc(tapa.nombre)}</strong>${tapa.votos ? `<span class="post-score">${STAR_FILL}${fmtMedia(tapa.media)}</span>` : ''}</div>
+    ${tapa.nota ? `<p class="post-note">${esc(tapa.nota)}</p>` : ''}
   </article>`;
 }
 
@@ -625,18 +618,6 @@ function rankingHTML(title, list, max, empty) {
     const bar = state.barById.get(x.bar);
     return `<button type="button" class="top-row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="medal m${i + 1}">${i + 1}</span><img src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(bar?.nombre ?? '')} · ${plural(x.votos, '1 nota', '{n} notas')}</small></span><span class="score">${STAR_FILL}${fmtMedia(x.media)}</span></button>`;
   }).join('')}</section>`;
-}
-
-/** Arriba, como historias: los bares que han subido tapa hoy (primero los que sigues). */
-function storiesHTML(today) {
-  const seen = new Set();
-  const list = [...today].sort((a, b) => (isFollowing(b.bar) - isFollowing(a.bar)) || (state.vistos.has(a.id) - state.vistos.has(b.id)) || byRating(a, b))
-    .filter((x) => !seen.has(x.bar) && seen.add(x.bar)).slice(0, 30);
-  if (list.length < 2) return '';
-  return `<div class="stories" role="list" aria-label="${t('Bares con tapa hoy')}">${list.map((x) => {
-    const bar = state.barById.get(x.bar);
-    return `<button type="button" role="listitem" class="story${state.vistos.has(x.id) ? ' seen' : ''}" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="ring"><img src="${esc(src(x, true))}" alt="" loading="lazy"></span><small>${esc(bar?.nombre ?? '')}</small></button>`;
-  }).join('')}</div>`;
 }
 
 function barRow(bar, extra = '') {
@@ -671,7 +652,7 @@ function homeHTML() {
   const list = filtered(pool);
   const counts = Object.fromEntries(Object.keys(TIPOS).map((k) => [k, pool.filter((x) => x.tipos?.includes(k)).length]));
   const chip = (key, label, n) => `<button type="button" data-act="filter" data-filter="${key}" aria-pressed="${state.filter === key}">${label}${n ? ` <span class="n">${n}</span>` : ''}</button>`;
-  const filters = state.tab === 'todo' && pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
+  const filters = state.tab === 'todo' && pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), 0)).join('')}</div>` : '';
 
   const sub = `${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa', '{n} tapas')}` : ''}`;
   const title = `<div class="head home-head"><img src="icon.svg" width="40" height="40" alt="Que Tapa!"><div><h1>${t('Hoy en Lugo')}</h1><small>${sub}</small></div></div>`;
@@ -717,7 +698,7 @@ function homeHTML() {
   const promo = !MOSTRAR_ALTA || state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
-  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${today.length >= 2 ? nowCard({ act: 'go', to: 'tapeo', icon: TOUR_ICON, title: t('Hazme una ruta de tapas'), sub: t('3 o 4 bares cerca con buena tapa hoy, andando') }) : ''}${storiesHTML(today)}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
+  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${today.length >= 2 ? nowCard({ act: 'go', to: 'tapeo', icon: TOUR_ICON, title: t('Ruta de tapas'), sub: t('Bares cerca con buena tapa hoy') }) : ''}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
 }
 
 /* ---------- Ficha del bar ---------- */
@@ -742,10 +723,8 @@ function barHTML() {
   let body;
   if (tapa) {
     const mine = state.notas[tapa.id]?.nota ?? 0;
-    const tags = [
-      isToday(tapa) ? `<span class="tag today">${t('Hoy')} · ${esc(ago(tapa))}</span>` : `<span class="tag">${CLOCK_ICON}${esc(ago(tapa))}</span>`,
-      tapa.autor === 'ejemplo' ? `<span class="tag">${t('Ejemplo')}</span>` : tapa.autor === 'bar' ? `<span class="tag">${CHECK}${t('Foto del bar')}</span>` : `<span class="tag">${t('Foto de un cliente')}</span>`,
-    ].join('');
+    const tags = tapa.autor === 'ejemplo' ? `<span class="tag">${t('Ejemplo')}</span>`
+      : isToday(tapa) ? `<span class="tag today">${t('Hoy')} · ${esc(ago(tapa))}</span>` : `<span class="tag">${CLOCK_ICON}${esc(ago(tapa))}</span>`;
     const tipos = (tapa.tipos ?? []).filter((k) => TIPOS[k]).map(tipoLabel).join(' · ');
     body = `<div class="photo"><img src="${esc(src(tapa))}" alt="${esc(tapa.nombre)}"><div class="tags">${tags}</div></div>
       <div class="tapa-meta"><h2 class="big-line">${esc(tapa.nombre)}</h2>${tipos ? `<small>${esc(tipos)}</small>` : ''}</div>
@@ -753,7 +732,7 @@ function barHTML() {
       ${canRate(tapa) ? `<div class="rate">
           <div class="rate-head"><strong>${mine ? t('Tu nota') : t('¿Qué te pareció?')}</strong><small>${tapa.votos ? `${STAR_FILL}${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}` : t('Sé el primero en puntuarla')}</small></div>
           <div class="stars" role="group" aria-label="${t('Tu nota')}">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= mine ? 'on' : ''}" data-act="rate" data-tapa="${esc(tapa.id)}" data-nota="${n}" aria-pressed="${n === mine}" aria-label="${plural(n, '1 estrella', '{n} estrellas')}">${STAR}</button>`).join('')}</div>
-          ${mine ? `<small class="rate-note">${t('Puedes cambiarla hasta mañana.')}</small>` : ''}</div>`
+</div>`
         : `${tapa.votos ? `<p class="note">${STAR_FILL} ${fmtMedia(tapa.media)} ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}</p>` : ''}<p class="note">${t('Esta es la última que subió. Cuando suba la de hoy, saldrá aquí.')}</p>`}`;
   } else {
     body = `<div class="photo none"><div>${CLOCK_ICON}<strong>${t('Este bar aún no ha subido su tapa')}</strong><span>${t('Cuando la suba, saldrá aquí con su foto.')}</span></div></div>`;
