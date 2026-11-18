@@ -108,6 +108,19 @@ test('cada persona pone una nota por tapa y día, y la puede cambiar', async () 
   assert.equal(bar.media, 3.5);
 });
 
+test('seguir y dejar de seguir un bar, sin cuenta', async () => {
+  const { bares: [bar] } = await (await fetch(`${url}/api/hoy`)).json();
+  const a = 'movil-uno-1234567890', b = 'movil-dos-1234567890';
+  assert.equal((await post('/api/seguir', { bar: bar.id, id: 'corto' })).status, 400);
+  assert.equal((await post('/api/seguir', { bar: 'no-existe', id: a })).status, 404);
+  assert.deepEqual(await (await post('/api/seguir', { bar: bar.id, id: a, on: true })).json(), { seguidores: 1, on: true });
+  assert.deepEqual(await (await post('/api/seguir', { bar: bar.id, id: a, on: true })).json(), { seguidores: 1, on: true });
+  assert.deepEqual(await (await post('/api/seguir', { bar: bar.id, id: b, on: true })).json(), { seguidores: 2, on: true });
+  assert.deepEqual(await (await post('/api/seguir', { bar: bar.id, id: a, on: false })).json(), { seguidores: 1, on: false });
+  const hoy = await (await fetch(`${url}/api/hoy`)).json();
+  assert.equal(hoy.bares.find((x) => x.id === bar.id).seguidores, 1);
+});
+
 test('alta de un bar, su enlace y su panel', async () => {
   assert.equal((await post('/api/altas', { nombre: 'Taberna Dous', contacto: '600112233', lat: 43.0101, lon: -7.5577, osm: 'osm-n2' })).status, 201);
   assert.equal((await post('/api/altas', { nombre: 'Lejos', contacto: '600112233', lat: 40.4, lon: -3.7 })).status, 400);

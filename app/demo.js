@@ -151,6 +151,8 @@ export function demoData(reales = [], { tapasReales = [], fecha: fechaServidor =
     const suyas = tapas.filter((x) => x.bar === b.id);
     const votos = suyas.reduce((s, x) => s + x.votos, 0);
     if (votos) Object.assign(b, { votos, media: Math.round((suyas.reduce((s, x) => s + x.media * x.votos, 0) / votos) * 10) / 10 });
+    // Seguidores de muestra, más los de verdad si los tiene.
+    if (suyas.length) b.seguidores = (b.seguidores ?? 0) + 12 + Math.round(azar(`${b.id}-seg`) * 240);
   }
   // El resto de bares de verdad, tal cual (con sus tapas de verdad si las tienen).
   const puestos = new Set(bares.map((b) => b.id));

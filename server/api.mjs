@@ -36,12 +36,15 @@ const publicTapa = (t) => ({
   id: t.id, bar: t.bar, fecha: t.fecha, at: t.at, nombre: t.nombre, tipos: t.tipos, nota: t.nota, foto: t.foto, autor: t.autor,
   votos: t.votos ?? 0, media: mediaDe(t.suma ?? 0, t.votos ?? 0),
 });
-const publicBar = (b, reg, nota = null) => ({
+const publicBar = (b, reg, nota = null, seguidores = 0) => ({
   id: b.id, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir || '', reg,
   ...(b.tipo ? { tipo: b.tipo } : {}),
   ...(b.insta ? { insta: b.insta } : {}),
   ...(nota?.votos ? { votos: nota.votos, media: mediaDe(nota.suma, nota.votos) } : {}),
+  ...(seguidores ? { seguidores } : {}),
 });
+/** El número que cada móvil se inventa para seguir bares sin cuenta. */
+const ID_MOVIL = /^[A-Za-z0-9_-]{16,40}$/;
 
 export function createApp({
   dataDir, now = Date.now, adminKey = '', notifyUrl = '', base = '', osm: osmOptions = {}, fetchImpl = fetch,
@@ -63,7 +66,10 @@ export function createApp({
   let tapas = load('tapas.json').map((t) => ({ votos: 0, suma: 0, ...t }));
   let reportes = load('reportes.json');
   let ocultos = new Set(load('ocultos.json'));
+  // Quién sigue a cada bar: el número al azar de cada móvil, sin nada más.
+  const seguidores = new Map(Object.entries(loadJSON(file('seguidores.json'), {}) ?? {}).map(([bar, ids]) => [bar, new Set(Array.isArray(ids) ? ids : [])]));
   let dirty = false;
+  let dirtySeg = false;
 
   const persist = {
     bares: () => saveJSON(file('bares.json'), bares),
@@ -71,7 +77,9 @@ export function createApp({
     tapas: () => { saveJSON(file('tapas.json'), tapas); dirty = false; },
     reportes: () => saveJSON(file('reportes.json'), reportes),
     ocultos: () => saveJSON(file('ocultos.json'), [...ocultos]),
+    seguidores: () => { saveJSON(file('seguidores.json'), Object.fromEntries([...seguidores].filter(([, ids]) => ids.size).map(([bar, ids]) => [bar, [...ids]]))); dirtySeg = false; },
   };
+  const nSeg = (id) => seguidores.get(id)?.size ?? 0;
 
   const subidas = createLimiter({ now, perHour: 6, perDay: 20 });
   const subidasBar = createLimiter({ now, perHour: 30, perDay: 60 });
@@ -79,6 +87,7 @@ export function createApp({
   const mensajes = createLimiter({ now, perHour: 6, perDay: 20 });
   const notasLimit = createLimiter({ now, perHour: 120, perDay: 400 });
   const paneles = createLimiter({ now, perHour: 60, perDay: 300 });
+  const seguirLimit = createLimiter({ now, perHour: 60, perDay: 200 });
   // Qué nota puso cada persona a cada tapa hoy (con la IP mezclada con el secreto del día): sirve
   // para que pueda cambiarla sin contar dos veces. Solo en memoria; se olvida al día siguiente.
   let notasHoy = { dia: '', puestas: new Map() };
@@ -108,8 +117,8 @@ export function createApp({
     const regIds = new Set(bares.map((b) => b.id));
     const notas = notasPorBar();
     return [
-      ...bares.map((b) => publicBar(b, true, notas.get(b.id))),
-      ...osm.list().filter((b) => !regIds.has(b.id) && !ocultos.has(b.id)).map((b) => publicBar(b, false, notas.get(b.id))),
+      ...bares.map((b) => publicBar(b, true, notas.get(b.id), nSeg(b.id))),
+      ...osm.list().filter((b) => !regIds.has(b.id) && !ocultos.has(b.id)).map((b) => publicBar(b, false, notas.get(b.id), nSeg(b.id))),
     ];
   }
 
@@ -167,7 +176,7 @@ export function createApp({
     const found = barById(id);
     if (!found) return reply(res, 404, { error: 'no existe' });
     const list = tapas.filter((t) => t.bar === id && t.estado === 'publicada').sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40).map(publicTapa);
-    return reply(res, 200, { fecha: jornada(now()), bar: publicBar(found.bar, found.reg, notasPorBar().get(id)), tapas: list }, 20);
+    return reply(res, 200, { fecha: jornada(now()), bar: publicBar(found.bar, found.reg, notasPorBar().get(id), nSeg(id)), tapas: list }, 20);
   }
 
   async function subir(req, res, from) {
@@ -288,11 +297,25 @@ export function createApp({
     const mine = tapas.filter((t) => t.bar === bar.id && t.estado === 'publicada').sort((a, b) => b.at.localeCompare(a.at));
     return reply(res, 200, {
       fecha,
-      bar: publicBar(bar, true),
+      bar: publicBar(bar, true, null, nSeg(bar.id)),
       tapas: mine.slice(0, 30).map(publicTapa),
       hoy: resumen(mine.filter((t) => t.fecha === fecha)),
       total: resumen(mine),
     });
+  }
+
+  /** Seguir o dejar de seguir un bar. No hay cuentas: el móvil manda su número al azar. */
+  async function seguir(req, res, from) {
+    const { value } = await readJSON(req, 512);
+    const id = value?.id;
+    if (typeof id !== 'string' || !ID_MOVIL.test(id)) return reply(res, 400, { error: 'falta el número del móvil' });
+    if (!barById(value?.bar)) return reply(res, 404, { error: 'no existe' });
+    if (!seguirLimit.allow(from)) return reply(res, 429, { error: 'demasiados intentos' });
+    let ids = seguidores.get(value.bar);
+    if (!ids) { ids = new Set(); seguidores.set(value.bar, ids); }
+    if (value.on === false) ids.delete(id); else ids.add(id);
+    dirtySeg = true;
+    return reply(res, 200, { seguidores: ids.size, on: value.on !== false });
   }
 
   async function borrarPropia(req, res, from) {
@@ -453,6 +476,7 @@ export function createApp({
     if (req.method === 'POST') {
       if (path === '/api/tapas') return subir(req, res, from);
       if (path === '/api/voto') return votar(req, res, from);
+      if (path === '/api/seguir') return seguir(req, res, from);
       if (path === '/api/altas') return alta(req, res, from);
       if (path === '/api/panel') return panel(req, res, from);
       if (path === '/api/tapas/borrar') return borrarPropia(req, res, from);
@@ -475,8 +499,8 @@ export function createApp({
     handle,
     osm,
     adminLink: () => `${base}/api/admin?clave=${encodeURIComponent(secret)}`,
-    /** Cada poco: guarda los «¡Que tapa!» contados y limpia lo viejo. */
-    flush() { if (dirty) persist.tapas(); },
+    /** Cada poco: guarda las notas y los seguidores contados. */
+    flush() { if (dirty) persist.tapas(); if (dirtySeg) persist.seguidores(); },
     prune,
   };
 }
