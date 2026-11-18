@@ -616,15 +616,14 @@ function heroHTML(today) {
   </button>`;
 }
 
-/** Las cinco mejores de la semana (una por bar, con al menos 3 notas), con medallas. */
-function topWeekHTML() {
+/** Una lista de las mejores, con medallas: una tapa por bar y al menos 3 notas. */
+function rankingHTML(title, list, max, empty) {
   const seen = new Set();
-  const top = state.tapas.filter((x) => x.votos >= 3 && daysBetween(x.fecha, state.fecha) <= 6).sort(byRating)
-    .filter((x) => !seen.has(x.bar) && seen.add(x.bar)).slice(0, 5);
-  if (top.length < 3) return '';
-  return `<section class="top-week"><h2>${TROPHY}${t('Top de la semana en Lugo')}</h2>${top.map((x, i) => {
+  const top = list.filter((x) => x.votos >= 3).sort(byRating).filter((x) => !seen.has(x.bar) && seen.add(x.bar)).slice(0, max);
+  if (!top.length) return `<section class="top-week"><h2>${TROPHY}${title}</h2><p class="note">${empty}</p></section>`;
+  return `<section class="top-week"><h2>${TROPHY}${title}</h2>${top.map((x, i) => {
     const bar = state.barById.get(x.bar);
-    return `<button type="button" class="top-row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="medal m${i + 1}">${i + 1}</span><img src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(bar?.nombre ?? '')}</small></span><span class="score">${STAR_FILL}${fmtMedia(x.media)}</span></button>`;
+    return `<button type="button" class="top-row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="medal m${i + 1}">${i + 1}</span><img src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(bar?.nombre ?? '')} · ${plural(x.votos, '1 nota', '{n} notas')}</small></span><span class="score">${STAR_FILL}${fmtMedia(x.media)}</span></button>`;
   }).join('')}</section>`;
 }
 
@@ -658,7 +657,6 @@ function followRow(bar) {
 }
 
 function filtered(list) {
-  if (state.filter === 'top') return [...list].sort(byRating);
   if (TIPOS[state.filter]) return list.filter((x) => x.tipos?.includes(state.filter));
   return list;
 }
@@ -667,22 +665,28 @@ const FEED_PAGE = 8;
 function homeHTML() {
   const today = state.tapas.filter(isToday);
   const following = state.tab === 'siguiendo';
+  const ranking = state.tab === 'top';
   // «Para ti»: las de hoy (o, si hoy aún no hay, las de estos días). «Siguiendo»: las de tus bares, de hoy y de estos días.
   const pool = today.length ? today : state.tapas;
   const list = filtered(pool);
   const counts = Object.fromEntries(Object.keys(TIPOS).map((k) => [k, pool.filter((x) => x.tipos?.includes(k)).length]));
   const chip = (key, label, n) => `<button type="button" data-act="filter" data-filter="${key}" aria-pressed="${state.filter === key}">${label}${n ? ` <span class="n">${n}</span>` : ''}</button>`;
-  const filters = !following && pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Recientes'), 0)}${chip('top', t('Las mejor valoradas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
+  const filters = state.tab === 'todo' && pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Todas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
 
   const sub = `${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa', '{n} tapas')}` : ''}`;
   const title = `<div class="head home-head"><img src="icon.svg" width="40" height="40" alt="Que Tapa!"><div><h1>${t('Hoy en Lugo')}</h1><small>${sub}</small></div></div>`;
 
   const tab = (key, label) => `<button type="button" role="tab" data-act="tab" data-tab="${key}" aria-selected="${state.tab === key}">${label}</button>`;
-  const tabs = `<div class="tabs" role="tablist">${tab('todo', t('Para ti'))}${tab('siguiendo', state.favs.length ? `${t('Siguiendo')} <span class="n">${state.favs.length}</span>` : t('Siguiendo'))}</div>`;
+  const tabs = `<div class="tabs" role="tablist">${tab('todo', t('Para ti'))}${tab('siguiendo', state.favs.length ? `${t('Siguiendo')} <span class="n">${state.favs.length}</span>` : t('Siguiendo'))}${tab('top', t('Top'))}</div>`;
 
   let feed;
   if (!state.loaded) feed = `<p class="empty">${t('Cargando las tapas de hoy…')}</p>`;
-  else if (following) {
+  else if (ranking) {
+    // Las mejores de hoy y las de la semana, aparte del muro.
+    feed = `${rankingHTML(t('Las mejores de hoy'), today, 5, t('Hoy aún no hay tapas con notas suficientes.'))}
+      ${rankingHTML(t('Top de la semana en Lugo'), state.tapas.filter((x) => daysBetween(x.fecha, state.fecha) <= 6), 10, t('Esta semana aún no hay tapas con notas suficientes.'))}
+      <p class="note">${t('Cuenta la nota media de cada tapa con al menos 3 notas; una por bar.')}</p>`;
+  } else if (following) {
     // Solo el perfil de cada bar que sigues; al entrar ves todo lo suyo.
     const bars = state.favs.map((id) => state.barById.get(id)).filter(Boolean);
     const when = (b) => { const x = state.latest.get(b.id); return x ? `${isToday(x) ? 1 : 0}${x.fecha}${x.at}` : ''; };
@@ -695,11 +699,7 @@ function homeHTML() {
   } else {
     const shown = list.slice(0, state.feedN);
     const olderNote = !today.length ? `<p class="note">${t('Hoy aún no hay tapas: estas son de los últimos días.')}</p>` : '';
-    const posts = shown.map(post);
-    // El top de la semana, metido en el muro después de las dos primeras.
-    const top = state.filter === 'todas' ? topWeekHTML() : '';
-    if (top) posts.splice(Math.min(2, posts.length), 0, top);
-    feed = `${olderNote}<div class="feed">${posts.join('')}</div>
+    feed = `${olderNote}<div class="feed">${shown.map(post).join('')}</div>
       ${list.length > shown.length ? `<button type="button" class="cta second" data-act="more">${t('Ver más tapas')} <span class="n">${list.length - shown.length}</span></button>` : ''}`;
   }
   const upload = SUBEN_CLIENTES && state.loaded ? `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>` : '';
