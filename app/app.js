@@ -516,6 +516,8 @@ const LOCK = svg('<rect x="5" y="10.5" width="14" height="10" rx="2.5"></rect><p
 const PHONE = svg('<rect x="7" y="2.8" width="10" height="18.4" rx="2.5"></rect><path d="M11 18h2"></path>', 18);
 const CLOCK_ICON = svg('<circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path>', 18);
 const MAP_ICON = svg('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"></path><path d="M9 4v14M15 6v14"></path>', 20);
+const GLOBE = svg('<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9s1.3-6.3 3.8-9z"></path>', 18);
+const TROPHY = svg('<path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"></path>', 16);
 const WALK = svg('<circle cx="13" cy="4.5" r="1.8"></circle><path d="M10.5 21l2-6.5-2.5-2.5 1-4.5 3 2.5 3 1"></path><path d="M11 8l-3 1.5-1 3.5M12.5 14.5l2.5 2.5 1 4"></path>', 20);
 const NAV = svg('<path d="M12 3l7 18-7-4-7 4z"></path>', 20);
 const fmtMedia = (m) => Number(m || 0).toFixed(1).replace('.', ',');
@@ -530,21 +532,17 @@ const privacyHref = () => (getLang() === 'gl' ? '/privacidade/' : '/privacidad/'
 function foot({ bar = '', tapa = '' } = {}) {
   return `<footer class="end"><nav class="end-links" aria-label="${t('Más')}">
     <button type="button" data-act="report" data-bar="${esc(bar)}" data-tapa="${esc(tapa)}">${BUBBLE}${t('¿Algo no cuadra?')}</button>
-    <a href="${privacyHref()}">${SHIELD}${t('Privacidad')}</a></nav>
+    <a href="${privacyHref()}">${SHIELD}${t('Privacidad')}</a>
+    ${getLang() === 'gl' ? `<button type="button" data-act="lang" data-lang="es" lang="es">${GLOBE}Castellano</button>` : `<button type="button" data-act="lang" data-lang="gl" lang="gl">${GLOBE}Galego</button>`}</nav>
     <p class="foot">${t('Web no oficial hecha en Lugo. Las tapas y sus fotos las suben los bares.')}</p></footer>`;
-}
-function langSwitch() {
-  const lang = getLang();
-  return `<div class="lang" role="group" aria-label="${t('Idioma')}"><button type="button" data-act="lang" data-lang="es" aria-pressed="${lang === 'es'}">Castellano</button><button type="button" data-act="lang" data-lang="gl" aria-pressed="${lang === 'gl'}">Galego</button></div>`;
 }
 // Las tarjetas «¿Tienes un bar?» y «¿Es tu bar?», ocultas de momento. La página de alta sigue en /#alta.
 const MOSTRAR_ALTA = false;
 // Las tapas las suben los bares desde su panel; quien entra en la web solo las mira y las puntúa.
 const SUBEN_CLIENTES = false;
 const demoBanner = (show = DEMO) => {
-  if (DEMO) return `<p class="notice-item">${INFO}<span><strong>${t('Modo de ejemplo.')}</strong> ${t('Bares de Lugo con tapas de muestra para ver cómo queda: las fotos son dibujos y las notas, inventadas. No lo ha subido ningún bar y no se envía nada.')}</span></p>`;
-  if (!show) return '';
-  return `<p class="notice-item">${INFO}<span><strong>${t('Tapas de ejemplo.')}</strong> ${t('Mientras los bares empiezan a subir las suyas, las marcadas como «Ejemplo» son de muestra: las fotos son dibujos y las notas, inventadas.')}</span></p>`;
+  if (!DEMO && !show) return '';
+  return `<p class="demo-line">${INFO}<span>${DEMO ? t('Modo de ejemplo: nada es real y no se envía nada.') : t('Tapas de ejemplo hasta que los bares suban las suyas.')}</span></p>`;
 };
 const tip = (icon, text) => `<li><span class="tip-icon">${icon}</span><span>${text}</span></li>`;
 const nowCard = ({ act, to = '', bar = '', icon, label = '', title, sub = '', line = false }) => `<button type="button" class="now${line ? ' line' : ''}" data-act="${act}"${to !== '' ? ` data-to="${esc(to)}"` : ''}${bar ? ` data-bar="${esc(bar)}"` : ''}><span class="now-icon">${icon}</span><span class="now-text">${label ? `<span class="now-label">${label}</span>` : ''}<strong>${title}</strong>${sub ? `<small>${sub}</small>` : ''}</span><span class="now-go" aria-hidden="true">›</span></button>`;
@@ -594,6 +592,31 @@ function post(tapa) {
   </article>`;
 }
 
+/** La tapa del día: la mejor valorada de hoy (con unas cuantas notas), a todo lo ancho. */
+function heroHTML(today) {
+  const best = today.filter((x) => x.votos >= 3).sort(byRating)[0];
+  if (!best) return '';
+  const bar = state.barById.get(best.bar);
+  if (!bar) return '';
+  return `<button type="button" class="hero" data-act="open-tapa" data-bar="${esc(bar.id)}" data-tapa="${esc(best.id)}">
+    <img src="${esc(src(best))}" alt="" decoding="async">
+    <span class="hero-badge">${TROPHY}${t('La tapa del día')}</span>
+    <span class="hero-text"><strong>${esc(best.nombre)}</strong><small>${esc(bar.nombre)} · ${STAR_FILL}${fmtMedia(best.media)} · ${plural(best.votos, '1 nota', '{n} notas')}</small></span>
+  </button>`;
+}
+
+/** Las cinco mejores de la semana (una por bar, con al menos 3 notas), con medallas. */
+function topWeekHTML() {
+  const seen = new Set();
+  const top = state.tapas.filter((x) => x.votos >= 3 && daysBetween(x.fecha, state.fecha) <= 6).sort(byRating)
+    .filter((x) => !seen.has(x.bar) && seen.add(x.bar)).slice(0, 5);
+  if (top.length < 3) return '';
+  return `<section class="top-week"><h2>${TROPHY}${t('Top de la semana en Lugo')}</h2>${top.map((x, i) => {
+    const bar = state.barById.get(x.bar);
+    return `<button type="button" class="top-row" data-act="open-tapa" data-bar="${esc(x.bar)}" data-tapa="${esc(x.id)}"><span class="medal m${i + 1}">${i + 1}</span><img src="${esc(src(x, true))}" alt="" loading="lazy"><span class="to"><strong>${esc(x.nombre)}</strong><small>${esc(bar?.nombre ?? '')}</small></span><span class="score">${STAR_FILL}${fmtMedia(x.media)}</span></button>`;
+  }).join('')}</section>`;
+}
+
 /** Arriba, como historias: los bares que han subido tapa hoy (primero los que sigues). */
 function storiesHTML(today) {
   const seen = new Set();
@@ -641,8 +664,7 @@ function homeHTML() {
   const filters = !following && pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Recientes'), 0)}${chip('top', t('Las mejor valoradas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
 
   const sub = `${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa', '{n} tapas')}` : ''}`;
-  const title = `<p class="eyebrow"><img src="icon.svg" width="22" height="22" alt=""><span>Que Tapa!</span> ${t('Las tapas de Lugo')}</p>
-    <div class="head"><div><h1>${t('Hoy en Lugo')}</h1><small>${sub}</small></div></div>`;
+  const title = `<div class="head home-head"><img src="icon.svg" width="40" height="40" alt="Que Tapa!"><div><h1>${t('Hoy en Lugo')}</h1><small>${sub}</small></div></div>`;
 
   const tab = (key, label) => `<button type="button" role="tab" data-act="tab" data-tab="${key}" aria-selected="${state.tab === key}">${label}</button>`;
   const tabs = `<div class="tabs" role="tablist">${tab('todo', t('Para ti'))}${tab('siguiendo', state.favs.length ? `${t('Siguiendo')} <span class="n">${state.favs.length}</span>` : t('Siguiendo'))}</div>`;
@@ -662,7 +684,11 @@ function homeHTML() {
   } else {
     const shown = list.slice(0, state.feedN);
     const olderNote = !today.length ? `<p class="note">${t('Hoy aún no hay tapas: estas son de los últimos días.')}</p>` : '';
-    feed = `${olderNote}<div class="feed">${shown.map(post).join('')}</div>
+    const posts = shown.map(post);
+    // El top de la semana, metido en el muro después de las dos primeras.
+    const top = state.filter === 'todas' ? topWeekHTML() : '';
+    if (top) posts.splice(Math.min(2, posts.length), 0, top);
+    feed = `${olderNote}<div class="feed">${posts.join('')}</div>
       ${list.length > shown.length ? `<button type="button" class="cta second" data-act="more">${t('Ver más tapas')} <span class="n">${list.length - shown.length}</span></button>` : ''}`;
   }
   const upload = SUBEN_CLIENTES && state.loaded ? `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>` : '';
@@ -680,9 +706,7 @@ function homeHTML() {
   const promo = !MOSTRAR_ALTA || state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
-  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${storiesHTML(today)}${tabs}${filters}${feed}${upload}${near}${promo}
-    <ul class="tips">${tip(STAR, t('Puntúa las tapas que pruebes: las mejor valoradas salen arriba.'))}${state.favs.length ? '' : tip(USER_PLUS, t('Sigue a tus bares y verás sus tapas en «Siguiendo».'))}</ul>
-    ${langSwitch()}${foot()}`;
+  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${storiesHTML(today)}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
 }
 
 /* ---------- Ficha del bar ---------- */
@@ -950,6 +974,15 @@ function render() {
   updateMap();
 }
 
+/** Baja (o sube) hasta la foto de la tapa en la ficha del bar, que va debajo del perfil. */
+function scrollToPhoto(smooth = false) {
+  const body = $('#sheet-body');
+  const photo = body.querySelector('.photo');
+  if (!photo) return;
+  const top = body.scrollTop + photo.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+  body.scrollTo({ top: Math.max(0, top), behavior: smooth && !reduced ? 'smooth' : 'auto' });
+}
+
 function setView(view, size) {
   const changed = state.view !== view;
   state.view = view;
@@ -984,14 +1017,18 @@ function route() {
   }
   if (name === 'bar' && a) {
     if (state.barId !== a) { state.bar = null; state.tapaId = null; }
+    // Si se abrió una tapa concreta (desde el muro, las historias o el top), se va directo a su foto.
+    const toPhoto = Boolean(state.pendingTapa);
     if (state.pendingTapa) { state.tapaId = state.pendingTapa; state.pendingTapa = null; }
     state.barId = a;
     setView('bar');
+    if (toPhoto) scrollToPhoto();
     const bar = state.barById.get(a);
     if (bar) flyTo(bar.lon, bar.lat);
     loadBar(a).then(() => {
       if (state.view === 'bar' && state.barId === a) {
         render();
+        if (toPhoto) scrollToPhoto();
         const known = state.barById.get(a);
         if (!bar && known) flyTo(known.lon, known.lat);
       }
@@ -1360,7 +1397,7 @@ function bindSheet() {
         markSeen(d.tapa);
         go(`bar/${d.bar}`);
         break;
-      case 'pick-tapa': state.tapaId = d.tapa; render(); $('#sheet-body').scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); break;
+      case 'pick-tapa': state.tapaId = d.tapa; render(); scrollToPhoto(true); break;
       case 'filter': state.filter = d.filter; state.feedN = FEED_PAGE; render(); break;
       case 'tab': state.tab = d.tab; state.feedN = FEED_PAGE; render(); break;
       case 'more': state.feedN += FEED_PAGE; render(); break;
