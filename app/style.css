@@ -69,6 +69,10 @@ svg { flex: none; }
 .round { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--surface); box-shadow: 0 2px 12px var(--shadow); }
 
 #locate { position: fixed; z-index: 2; right: var(--gutter-r); bottom: calc(var(--sheet-h) + 14px); color: var(--me); }
+/* La ruta de tapas, como botón del mapa junto al de ubicación (solo en la portada). */
+.pill-btn { position: fixed; z-index: 2; right: calc(var(--gutter-r) + 56px); bottom: calc(var(--sheet-h) + 14px); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 14px; border: 0; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 2px 12px var(--shadow); font-size: var(--t-note); font-weight: 700; }
+.pill-btn svg { color: var(--brand-fg); }
+body:not([data-view="home"]) .pill-btn { display: none; }
 .zoom { display: none; }
 #credit { position: fixed; z-index: 2; left: var(--gutter-l); bottom: calc(var(--sheet-h) + 10px); width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--mute); font-size: 13px; font-weight: 700; line-height: 22px; }
 #credit::after { content: ""; position: absolute; inset: -11px; }
@@ -177,8 +181,8 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .post-head .who > span:last-child { min-width: 0; }
 .post-head strong { display: block; font-size: var(--t-action); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .post-head small { display: block; margin-top: 1px; font-size: var(--t-label); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.follow { flex: none; height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: var(--brand); color: var(--on-brand); font-size: var(--t-note); font-weight: 700; }
-.follow.on { background: var(--soft); color: var(--ink); }
+.follow { flex: none; height: 40px; padding: 0 4px 0 12px; border: 0; background: transparent; color: var(--brand-fg); font-size: var(--t-note); font-weight: 700; }
+.follow.on { color: var(--mute); font-weight: 400; }
 .post-photo { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--soft); }
 .post-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .post-photo .tags { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; }
@@ -366,6 +370,7 @@ body[data-labels] .pin-name { display: block; }
   #sheet { left: max(24px, calc(50% - 300px)); right: max(24px, calc(50% - 300px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px) + var(--kb, 0px)); padding-bottom: 0; border-radius: 22px; --sheet-room: calc(var(--vvh, 100dvh) - 100px - env(safe-area-inset-top, 0px)); max-height: min(46dvh, var(--sheet-room)); }
   #sheet[data-size="tall"] { max-height: min(76dvh, var(--sheet-room)); }
   #locate { right: max(24px, calc(50% - 300px)); bottom: calc(var(--sheet-h) + 40px); }
+  .pill-btn { right: calc(max(24px, calc(50% - 300px)) + 56px); bottom: calc(var(--sheet-h) + 40px); }
   #credit { left: max(24px, calc(50% - 300px)); bottom: calc(var(--sheet-h) + 34px); }
   #toast { bottom: calc(var(--sheet-h) + 40px); }
 }
@@ -389,6 +394,7 @@ body[data-labels] .pin-name { display: block; }
   #sheet-body { padding: 0; }
   .filters { margin: 0 -24px; padding-left: 24px; padding-right: 24px; scroll-padding: 0 24px; }
   #locate { right: 20px; bottom: 144px; }
+  .pill-btn { right: 76px; bottom: 144px; }
   .zoom { position: fixed; z-index: 2; right: 20px; bottom: 44px; display: flex; flex-direction: column; border-radius: 12px; background: var(--surface); box-shadow: 0 2px 10px var(--shadow); }
   .zoom button { width: 44px; height: 44px; border: 0; background: transparent; font-size: 22px; line-height: 1; }
   .zoom button + button { border-top: 1px solid var(--rule); }
@@ -401,6 +407,7 @@ body[data-labels] .pin-name { display: block; }
   .side { gap: 8px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px calc(8px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px)); }
   .brand { display: none; }
   #locate { bottom: 116px; }
+  .pill-btn { bottom: 116px; }
   .zoom { bottom: 16px; }
   #credit { bottom: 16px; right: 72px; }
 }

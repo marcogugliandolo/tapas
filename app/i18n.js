@@ -26,7 +26,6 @@ export const GL = {
   "Web no oficial hecha en Lugo. Las tapas y sus fotos las suben los bares.": "Web non oficial feita en Lugo. As tapas e as súas fotos súbenas os bares.",
   "Idioma": "Idioma",
   "Ejemplo": "Exemplo",
-  "Bares cerca con buena tapa hoy": "Bares preto con boa tapa hoxe",
   "Todas": "Todas",
   "Top": "Top",
   "Las mejores de hoy": "As mellores de hoxe",

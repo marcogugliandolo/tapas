@@ -6,7 +6,7 @@ Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil 
 - **«Hoy en Lugo».** Las tapas del día en fila, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y las tres mejor valoradas.
 - **Como una red social.** Arriba, las «historias» de los bares que han subido tapa hoy (aro de color si aún no la viste). Debajo, las pestañas **Para ti**, **Siguiendo** y **Top**, con un muro de publicaciones: el bar, la foto grande, las estrellas para puntuar y compartir. Cada bar tiene su **perfil** (tapas, nota media, seguidores, botón Seguir y la rejilla de sus tapas). Seguir no pide cuenta: el móvil guarda a quién sigues y manda un número al azar para que el servidor cuente los seguidores.
 - **La tapa del día y el Top.** Arriba, la mejor valorada de hoy a todo lo ancho. La pestaña **Top** tiene las 5 mejores de hoy y las 10 de la semana, con medallas (una por bar y con al menos 3 notas).
-- **Ruta de tapas** (`/#tapeo`). Elige 3 o 4 bares con tapa hoy, bien valorados y cerca unos de otros, y dibuja el camino andando con las paradas numeradas.
+- **Ruta de tapas** (botón sobre el mapa, o `/#tapeo`). Elige 3 o 4 bares con tapa hoy, bien valorados y cerca unos de otros, y dibuja el camino andando con las paradas numeradas.
 - **Logo del bar.** El bar lo sube desde su panel (o una foto de la fachada) y sale en su perfil y en el muro en vez de las iniciales.
 - **Compartir con foto.** El enlace `/compartir/<bar>` sale en WhatsApp con la foto de la tapa de hoy y su nota; al abrirlo, lleva a la ficha del bar.
 - **Las suben los bares.** Quien entra en la web solo mira las tapas, las puntúa y llega andando; la foto de cada día la sube el bar desde su panel.

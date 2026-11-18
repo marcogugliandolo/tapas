@@ -698,7 +698,7 @@ function homeHTML() {
   const promo = !MOSTRAR_ALTA || state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
-  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${today.length >= 2 ? nowCard({ act: 'go', to: 'tapeo', icon: TOUR_ICON, title: t('Ruta de tapas'), sub: t('Bares cerca con buena tapa hoy') }) : ''}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
+  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
 }
 
 /* ---------- Ficha del bar ---------- */
@@ -1043,6 +1043,7 @@ const TALL = ['search', 'upload', 'alta', 'panel', 'report'];
 function render() {
   const view = state.view;
   document.body.dataset.view = view;
+  $('#tour-btn').hidden = view !== 'home' || state.tapas.filter(isToday).length < 2;
   const html = view === 'bar' ? barHTML()
     : view === 'search' ? searchHTML()
       : view === 'upload' ? uploadHTML()
@@ -1787,6 +1788,7 @@ function start() {
   bindSheetDrag();
   $('#theme').addEventListener('click', () => setTheme(isDark() ? 'light' : 'dark'));
   $('#locate').addEventListener('click', locate);
+  $('#tour-btn').addEventListener('click', () => go('tapeo'));
   $('#zoom-in').addEventListener('click', () => map?.zoomIn());
   $('#zoom-out').addEventListener('click', () => map?.zoomOut());
   $('#credit').addEventListener('click', () => toast(t('Mapa: OpenFreeMap © OpenMapTiles. Bares: © colaboradores de OpenStreetMap.'), 5000));
