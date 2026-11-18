@@ -531,7 +531,7 @@ function foot({ bar = '', tapa = '' } = {}) {
   return `<footer class="end"><nav class="end-links" aria-label="${t('Más')}">
     <button type="button" data-act="report" data-bar="${esc(bar)}" data-tapa="${esc(tapa)}">${BUBBLE}${t('¿Algo no cuadra?')}</button>
     <a href="${privacyHref()}">${SHIELD}${t('Privacidad')}</a></nav>
-    <p class="foot">${t('Web no oficial hecha en Lugo. Las fotos son de los bares y de la gente que va de viños.')}</p></footer>`;
+    <p class="foot">${t('Web no oficial hecha en Lugo. Las tapas y sus fotos las suben los bares.')}</p></footer>`;
 }
 function langSwitch() {
   const lang = getLang();
@@ -571,9 +571,8 @@ const followBtn = (bar, big = false) => {
     : `<button type="button" class="follow${on ? ' on' : ''}" data-act="follow" data-bar="${esc(bar.id)}" aria-pressed="${on}">${on ? t('Siguiendo') : t('Seguir')}</button>`;
 };
 
-/** Una publicación del muro: el bar, la foto grande, las estrellas y el texto. `older` son sus
- * tapas de días anteriores, que en «Siguiendo» salen en pequeño debajo en vez de repetir el bar. */
-function post(tapa, older = []) {
+/** Una publicación del muro: el bar, la foto grande, las estrellas y el texto. */
+function post(tapa) {
   const bar = state.barById.get(tapa.bar);
   if (!bar) return '';
   const mine = state.notas[tapa.id]?.nota ?? 0;
@@ -592,7 +591,6 @@ function post(tapa, older = []) {
       ${tapa.votos ? `<small class="post-score">${STAR_FILL}<b>${fmtMedia(tapa.media)}</b> ${t('de media')} · ${plural(tapa.votos, '1 nota', '{n} notas')}${mine ? ` · ${t('la tuya: {n}', { n: mine })}` : ''}</small>` : ''}
       ${tapa.nota ? `<p>${esc(tapa.nota)}</p>` : ''}
     </div>
-    ${older.length ? `<div class="older"><small>${t('Sus tapas de estos días')}</small><div class="older-list">${older.map((x) => `<button type="button" data-act="open-tapa" data-bar="${esc(bar.id)}" data-tapa="${esc(x.id)}"><img src="${esc(src(x, true))}" alt="" loading="lazy"><span><b>${esc(shortDate(x.fecha))}</b>${esc(x.nombre)}</span></button>`).join('')}</div></div>` : ''}
   </article>`;
 }
 
@@ -614,6 +612,17 @@ function barRow(bar, extra = '') {
   return `<button type="button" class="row" data-act="open-bar" data-bar="${esc(bar.id)}">${avatar(bar, 44)}<span class="to"><strong>${esc(bar.nombre)}</strong><small>${sub}${extra}</small></span><span class="more" aria-hidden="true">›</span></button>`;
 }
 
+/** En «Siguiendo», cada bar en una línea: su perfil y su tapa de hoy en pequeño. Al tocarlo, se abre. */
+function followRow(bar) {
+  const tapa = state.latest.get(bar.id);
+  const today = tapa && isToday(tapa);
+  const sub = tapa
+    ? `${today ? `<b class="today">${t('Hoy')}</b>` : esc(shortDate(tapa.fecha))} · ${esc(tapa.nombre)}${tapa.votos ? ` · ${STAR_FILL}${fmtMedia(tapa.media)}` : ''}`
+    : t('Aún no ha subido tapa');
+  const fresh = today && !state.vistos.has(tapa.id);
+  return `<button type="button" class="row follow-row" data-act="open-bar" data-bar="${esc(bar.id)}">${avatar(bar, 48)}<span class="to"><strong>${esc(bar.nombre)}</strong><small>${sub}</small></span>${tapa ? `<span class="pic${fresh ? ' fresh' : ''}"><img src="${esc(src(tapa, true))}" alt="" loading="lazy"></span>` : ''}</button>`;
+}
+
 function filtered(list) {
   if (state.filter === 'top') return [...list].sort(byRating);
   if (TIPOS[state.filter]) return list.filter((x) => x.tipos?.includes(state.filter));
@@ -625,11 +634,11 @@ function homeHTML() {
   const today = state.tapas.filter(isToday);
   const following = state.tab === 'siguiendo';
   // «Para ti»: las de hoy (o, si hoy aún no hay, las de estos días). «Siguiendo»: las de tus bares, de hoy y de estos días.
-  const pool = following ? state.tapas.filter((x) => isFollowing(x.bar)) : (today.length ? today : state.tapas);
+  const pool = today.length ? today : state.tapas;
   const list = filtered(pool);
   const counts = Object.fromEntries(Object.keys(TIPOS).map((k) => [k, pool.filter((x) => x.tipos?.includes(k)).length]));
   const chip = (key, label, n) => `<button type="button" data-act="filter" data-filter="${key}" aria-pressed="${state.filter === key}">${label}${n ? ` <span class="n">${n}</span>` : ''}</button>`;
-  const filters = pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Recientes'), 0)}${chip('top', t('Las mejor valoradas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
+  const filters = !following && pool.length > 1 ? `<div class="filters" role="group" aria-label="${t('Filtrar tapas')}">${chip('todas', t('Recientes'), 0)}${chip('top', t('Las mejor valoradas'), 0)}${Object.keys(TIPOS).filter((k) => counts[k]).map((k) => chip(k, tipoLabel(k), counts[k])).join('')}</div>` : '';
 
   const sub = `${esc(dayLabel(state.fecha))}${state.loaded && today.length ? ` · ${plural(today.length, '1 tapa', '{n} tapas')}` : ''}`;
   const title = `<p class="eyebrow"><img src="icon.svg" width="22" height="22" alt=""><span>Que Tapa!</span> ${t('Las tapas de Lugo')}</p>
@@ -640,24 +649,21 @@ function homeHTML() {
 
   let feed;
   if (!state.loaded) feed = `<p class="empty">${t('Cargando las tapas de hoy…')}</p>`;
-  else if (following && !state.favs.length) {
-    feed = `<div class="feed-empty">${USER_PLUS}<strong>${t('Aún no sigues a ningún bar')}</strong><span>${t('Pulsa «Seguir» en los bares que te gusten y aquí verás sus tapas cada día.')}</span></div>`;
+  else if (following) {
+    // Solo el perfil de cada bar que sigues; al entrar ves todo lo suyo.
+    const bars = state.favs.map((id) => state.barById.get(id)).filter(Boolean);
+    const when = (b) => { const x = state.latest.get(b.id); return x ? `${isToday(x) ? 1 : 0}${x.fecha}${x.at}` : ''; };
+    bars.sort((a, b) => when(b).localeCompare(when(a)));
+    feed = bars.length
+      ? `<section class="rows">${bars.map(followRow).join('')}</section>`
+      : `<div class="feed-empty">${USER_PLUS}<strong>${t('Aún no sigues a ningún bar')}</strong><span>${t('Pulsa «Seguir» en los bares que te gusten y aquí los tendrás a mano, con su tapa de cada día.')}</span></div>`;
   } else if (!list.length) {
-    feed = `<p class="empty">${following ? t('Los bares que sigues no han subido tapas estos días.') : pool.length ? t('Hoy no hay tapas de este tipo todavía.') : ''}</p>`;
+    feed = `<p class="empty">${pool.length ? t('Hoy no hay tapas de este tipo todavía.') : ''}</p>`;
   } else {
-    // En «Siguiendo», una publicación por bar: su última tapa y las anteriores en pequeño.
-    let groups;
-    if (following) {
-      const byBar = new Map();
-      const recent = [...list].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.at.localeCompare(a.at));
-      for (const x of recent) (byBar.get(x.bar) ?? byBar.set(x.bar, []).get(x.bar)).push(x);
-      groups = [...byBar.values()];
-      if (state.filter === 'top') groups.sort((a, b) => byRating(a[0], b[0]));
-    } else groups = list.map((x) => [x]);
-    const shown = groups.slice(0, state.feedN);
-    const olderNote = !following && !today.length ? `<p class="note">${t('Hoy aún no hay tapas: estas son de los últimos días.')}</p>` : '';
-    feed = `${olderNote}<div class="feed">${shown.map(([first, ...rest]) => post(first, rest)).join('')}</div>
-      ${groups.length > shown.length ? `<button type="button" class="cta second" data-act="more">${following ? t('Ver más bares') : t('Ver más tapas')} <span class="n">${groups.length - shown.length}</span></button>` : ''}`;
+    const shown = list.slice(0, state.feedN);
+    const olderNote = !today.length ? `<p class="note">${t('Hoy aún no hay tapas: estas son de los últimos días.')}</p>` : '';
+    feed = `${olderNote}<div class="feed">${shown.map(post).join('')}</div>
+      ${list.length > shown.length ? `<button type="button" class="cta second" data-act="more">${t('Ver más tapas')} <span class="n">${list.length - shown.length}</span></button>` : ''}`;
   }
   const upload = SUBEN_CLIENTES && state.loaded ? `<button type="button" class="cta brand-btn" data-act="upload">${CAMERA}${t('Subir una tapa')}</button>` : '';
 

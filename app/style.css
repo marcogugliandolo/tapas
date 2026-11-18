@@ -154,14 +154,6 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .post-text .post-score b { color: var(--ink); }
 .post-text .post-score svg { width: 13px; height: 13px; fill: var(--star); stroke: #B07F00; stroke-width: 1.2; }
 .post-text p { margin-top: 4px; font-size: var(--t-note); line-height: 1.4; }
-.older { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
-.older > small { font-size: var(--t-label); font-weight: 700; color: var(--mute); }
-.older-list { display: flex; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
-.older-list::-webkit-scrollbar { display: none; }
-.older-list button { flex: none; display: flex; flex-direction: column; gap: 4px; width: 76px; padding: 0; border: 0; background: transparent; text-align: left; }
-.older-list img { width: 76px; height: 76px; border-radius: 12px; object-fit: cover; background: var(--soft); }
-.older-list span { font-size: 12px; line-height: 1.25; color: var(--mute); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.older-list b { display: block; color: var(--ink); font-weight: 700; }
 .feed-empty { display: grid; justify-items: center; gap: 6px; padding: 26px 16px; border-radius: 16px; background: var(--soft); text-align: center; color: var(--mute); font-size: var(--t-note); line-height: 1.4; }
 .feed-empty svg { width: 30px; height: 30px; color: var(--ink); }
 .feed-empty strong { color: var(--ink); font-size: var(--t-body); }
@@ -185,6 +177,13 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .row .to small { display: block; margin-top: 2px; font-size: var(--t-note); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .score { flex: none; display: inline-flex; align-items: center; gap: 4px; font-family: var(--display); font-size: var(--t-big); font-weight: 700; font-variant-numeric: tabular-nums; }
 .row .score svg { width: 15px; height: 15px; fill: var(--star); stroke: #B07F00; stroke-width: 1.2; }
+.follow-row { min-height: 72px; }
+.follow-row .to small { display: flex; align-items: center; gap: 4px; }
+.follow-row .to small svg { width: 12px; height: 12px; fill: var(--star); stroke: #B07F00; stroke-width: 1.2; flex: none; }
+.follow-row .today { color: var(--brand-fg); font-weight: 700; }
+.follow-row .pic { flex: none; width: 52px; height: 52px; padding: 2px; border-radius: 14px; background: transparent; }
+.follow-row .pic.fresh { background: conic-gradient(from 210deg, #FFC400, var(--brand), #FF8A3C, #FFC400); }
+.follow-row .pic img { display: block; width: 100%; height: 100%; border: 2px solid var(--surface); border-radius: 12px; object-fit: cover; background: var(--soft); }
 .row .more { flex: none; font-size: 22px; color: var(--mute); }
 
 /* Tarjetas y botones */
