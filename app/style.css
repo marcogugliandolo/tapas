@@ -156,6 +156,27 @@ body[data-view="search"] #sheet[data-size="tall"] { height: var(--sheet-room); }
 .medal.m2 { background: #CDD3D9; color: #2B3138; }
 .medal.m3 { background: #E3A46B; color: #3E2208; }
 
+.avatar.logo { background: var(--soft); overflow: hidden; }
+.avatar.logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.logo-box { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: var(--soft); }
+.logo-box > div { flex: 1; min-width: 0; }
+.logo-box strong { display: block; font-size: var(--t-body); }
+.logo-box small { display: block; margin-top: 2px; font-size: var(--t-note); line-height: 1.35; color: var(--mute); }
+.logo-actions { display: flex; gap: 8px; margin-top: 6px; }
+.logo-actions .ghost { height: 38px; }
+
+.tour-num { display: grid; place-items: center; width: 26px; height: 26px; border: 3px solid #FFFFFF; border-radius: 50%; background: var(--focus, #1F5FE0); color: #FFFFFF; font: 700 13px/1 var(--display); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); pointer-events: none; }
+.tour-list { display: flex; flex-direction: column; }
+.tour-stop { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid var(--rule); background: transparent; text-align: left; color: inherit; }
+.tour-n { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--focus, #1F5FE0); color: #FFFFFF; font: 700 14px/1 var(--display); }
+.tour-stop img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; background: var(--soft); }
+.tour-stop .to { flex: 1; min-width: 0; line-height: 1.25; }
+.tour-stop strong, .tour-stop small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tour-stop small { margin-top: 2px; font-size: var(--t-note); color: var(--mute); }
+.tour-stop small svg { width: 13px; height: 13px; vertical-align: -2px; }
+.tour-stop small:not(.leg) svg { fill: var(--star); stroke: #B07F00; stroke-width: 1.2; }
+.tour-stop .leg { color: var(--ink); font-weight: 700; }
+
 .feed { display: flex; flex-direction: column; gap: 22px; }
 .post { display: flex; flex-direction: column; gap: 10px; }
 .post-head { display: flex; align-items: center; gap: 10px; }
@@ -404,3 +425,5 @@ body[data-labels] .pin-name { display: block; }
   .pin { transition: none; }
   .stars button[aria-pressed="true"] svg { animation: none; }
 }
+/* En el ordenador el logo ya está arriba, en la marca. */
+@media (min-width: 1000px) { .home-head img { display: none; } }

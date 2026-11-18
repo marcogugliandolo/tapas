@@ -2,7 +2,7 @@
 // Con conexión siempre se pide la versión nueva (y se guarda); sin conexión, o si la red tarda
 // demasiado, se sirve la guardada. Las fotos no cambian nunca: se guardan aparte y se sirven de ahí.
 
-const CACHE = 'quetapa-v13';
+const CACHE = 'quetapa-v14';
 const FOTOS = 'quetapa-fotos-v1';
 const MAX_FOTOS = 150;
 const CORE = [

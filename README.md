@@ -5,6 +5,10 @@ Las tapas de Lugo, hoy y con foto: qué pone cada bar, en un mapa, en el móvil 
 - **El mapa con las fotos.** Cada bar con tapa hoy sale con la foto de su tapa y su nota media.
 - **«Hoy en Lugo».** Las tapas del día en fila, con filtros (carne, del mar, de cuchara, huevo y tortilla, vegetariana, sin gluten) y las tres mejor valoradas.
 - **Como una red social.** Arriba, las «historias» de los bares que han subido tapa hoy (aro de color si aún no la viste). Debajo, las pestañas **Para ti** y **Siguiendo** con un muro de publicaciones: el bar, la foto grande, las estrellas para puntuar y compartir. Cada bar tiene su **perfil** (tapas, nota media, seguidores, botón Seguir y la rejilla de sus tapas). Seguir no pide cuenta: el móvil guarda a quién sigues y manda un número al azar para que el servidor cuente los seguidores.
+- **La tapa del día y el top de la semana.** Arriba, la mejor valorada de hoy a todo lo ancho; dentro del muro, las 5 mejores de la semana con medallas.
+- **Ruta de tapas** (`/#tapeo`). Elige 3 o 4 bares con tapa hoy, bien valorados y cerca unos de otros, y dibuja el camino andando con las paradas numeradas.
+- **Logo del bar.** El bar lo sube desde su panel (o una foto de la fachada) y sale en su perfil y en el muro en vez de las iniciales.
+- **Compartir con foto.** El enlace `/compartir/<bar>` sale en WhatsApp con la foto de la tapa de hoy y su nota; al abrirlo, lleva a la ficha del bar.
 - **Las suben los bares.** Quien entra en la web solo mira las tapas, las puntúa y llega andando; la foto de cada día la sube el bar desde su panel.
 - **Notas de 1 a 5 estrellas.** Al abrir una tapa la puntúas (una nota por persona, tapa y día; se puede cambiar) y cada bar enseña su media juntando todas sus tapas. Sin cuentas.
 - **Fotos de clientes (apagado).** El código para que cualquiera suba la foto de lo que le pusieron sigue ahí, con moderación, pero está oculto: se enciende con `SUBEN_CLIENTES` en `app/app.js`. Igual las tarjetas «¿Tienes un bar?» con `MOSTRAR_ALTA`.
@@ -78,6 +82,8 @@ Node 22 sin dependencias. Todo se guarda en ficheros JSON y JPEG dentro de `DATA
 | `GET /api/bar/<id>` | Un bar y sus últimas 40 tapas. |
 | `GET /api/fotos/<id>.jpg` | La foto grande (`<id>-m.jpg`, la miniatura del mapa). No cambian nunca: se guardan en caché un mes. |
 | `POST /api/tapas` | Sube una tapa. Con la clave del bar sale al momento; sin ella, espera a la moderación. |
+| `POST /api/logo` | `{ bar, clave, foto, mini }` (JPEG cuadrado de 512 y 160 px) o `{ bar, clave, quitar: true }`: el logo del bar. |
+| `GET /compartir/<bar>` | Página con la vista previa para WhatsApp (foto de la tapa de hoy, nombre y nota) que lleva a la ficha del bar. |
 | `POST /api/seguir` | `{ bar, id, on }`: seguir (o dejar de seguir) un bar. `id` es el número al azar del móvil; el servidor solo guarda esos números para contar seguidores. |
 | `POST /api/voto` | `{ tapa, nota }` con nota de 1 a 5: una por persona, tapa y día (si repite, se cambia). Se puntúan la tapa de hoy y la de ayer. |
 | `POST /api/altas` | Un bar pide el alta. |

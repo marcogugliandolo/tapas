@@ -40,6 +40,7 @@ const publicBar = (b, reg, nota = null, seguidores = 0) => ({
   id: b.id, nombre: b.nombre, lat: b.lat, lon: b.lon, dir: b.dir || '', reg,
   ...(b.tipo ? { tipo: b.tipo } : {}),
   ...(b.insta ? { insta: b.insta } : {}),
+  ...(b.logo ? { logo: b.logo } : {}),
   ...(nota?.votos ? { votos: nota.votos, media: mediaDe(nota.suma, nota.votos) } : {}),
   ...(seguidores ? { seguidores } : {}),
 });
@@ -304,6 +305,65 @@ export function createApp({
     });
   }
 
+  /** El logo (o una foto de la fachada) del bar, desde su panel. `quitar: true` lo borra. */
+  async function logo(req, res, from) {
+    const { value, tooBig } = await readJSON(req, 400_000);
+    if (tooBig) return reply(res, 413, { error: 'la foto pesa demasiado' });
+    const { bar, error } = ownerOf(value, from);
+    if (error) return reply(res, error[0], { error: error[1] });
+    let id = '';
+    if (!value.quitar) {
+      const photos = checkPhotos(value.foto, value.mini);
+      if (photos.error) return reply(res, 400, { error: photos.error });
+      id = fotos.save(photos);
+    }
+    if (bar.logo) fotos.remove(bar.logo);
+    if (id) bar.logo = id; else delete bar.logo;
+    persist.bares();
+    return reply(res, 200, { logo: id });
+  }
+
+  /**
+   * GET /compartir/<bar>: la página que ven WhatsApp, Telegram o Instagram al pegar el enlace, con la
+   * foto de la tapa de hoy, su nombre y su nota. A las personas las manda a la ficha del bar.
+   */
+  function compartir(req, res, id) {
+    const found = barById(id);
+    const host = String(req.headers['x-forwarded-host'] ?? '').split(',')[0].trim();
+    // La dirección por la que entró la persona (la que WhatsApp sabe abrir); si no llega, la configurada.
+    const origin = /^[\w.-]+(:\d+)?$/.test(host) ? `https://${host}` : base;
+    const target = found ? `/#bar/${encodeURIComponent(id)}` : '/';
+    let title = 'Que Tapa! · Las tapas de Lugo';
+    let desc = 'Qué tapa ponen hoy en cada bar de Lugo, con foto.';
+    let image = `${origin}/og.png`;
+    if (found) {
+      const fecha = jornada(now());
+      const last = tapas.filter((t) => t.bar === id && t.estado === 'publicada').sort((a, b) => b.at.localeCompare(a.at))[0];
+      const nombre = found.bar.nombre;
+      if (last && last.fecha === fecha) {
+        title = `${last.nombre} · ${nombre}`;
+        desc = `${last.votos ? `★ ${mediaDe(last.suma, last.votos).toFixed(1).replace('.', ',')} (${last.votos}) · ` : ''}La tapa de hoy en ${nombre}, Lugo. Mírala en Que Tapa!`;
+        image = `${origin}/api/fotos/${last.foto}.jpg`;
+      } else {
+        title = `${nombre} · Que Tapa!`;
+        desc = `La tapa de cada día en ${nombre}, Lugo.`;
+        if (found.bar.logo) image = `${origin}/api/fotos/${found.bar.logo}.jpg`;
+      }
+    }
+    const e = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${e(title)}</title><meta name="description" content="${e(desc)}">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Que Tapa!">
+<meta property="og:title" content="${e(title)}"><meta property="og:description" content="${e(desc)}">
+<meta property="og:image" content="${e(image)}"><meta property="og:url" content="${e(`${origin}/compartir/${id}`)}">
+<meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#E4472B">
+<meta http-equiv="refresh" content="0; url=${e(target)}"></head>
+<body style="font-family:system-ui,sans-serif;padding:24px"><p><a href="${e(target)}">Abrir en Que Tapa!</a></p></body></html>`;
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'" });
+    res.end(html);
+    return true;
+  }
+
   /** Seguir o dejar de seguir un bar. No hay cuentas: el móvil manda su número al azar. */
   async function seguir(req, res, from) {
     const { value } = await readJSON(req, 512);
@@ -471,12 +531,15 @@ export function createApp({
     if (fotos.handle(req, res, path)) return true;
     if (path === '/api/admin') return admin(req, res);
     if (req.method === 'GET' && path === '/api/hoy') return hoy(res);
+    const shareMatch = path.match(/^\/compartir\/([\w-]{1,60})\/?$/);
+    if (req.method === 'GET' && shareMatch) return compartir(req, res, shareMatch[1]);
     const barMatch = path.match(/^\/api\/bar\/([\w-]{1,60})$/);
     if (req.method === 'GET' && barMatch) return barInfo(res, barMatch[1]);
     if (req.method === 'POST') {
       if (path === '/api/tapas') return subir(req, res, from);
       if (path === '/api/voto') return votar(req, res, from);
       if (path === '/api/seguir') return seguir(req, res, from);
+      if (path === '/api/logo') return logo(req, res, from);
       if (path === '/api/altas') return alta(req, res, from);
       if (path === '/api/panel') return panel(req, res, from);
       if (path === '/api/tapas/borrar') return borrarPropia(req, res, from);

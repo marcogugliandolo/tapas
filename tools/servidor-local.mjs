@@ -22,7 +22,7 @@ console.log(`Moderación: ${api.adminLink()}`);
 
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
-  if (url.pathname.startsWith('/api/')) { api.handle(req, res); return; }
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/compartir/')) { api.handle(req, res); return; }
   let file = normalize(join(ROOT, decodeURIComponent(url.pathname)));
   if (!file.startsWith(ROOT)) { res.writeHead(403); res.end(); return; }
   if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');

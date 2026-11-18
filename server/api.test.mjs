@@ -147,6 +147,22 @@ test('alta de un bar, su enlace y su panel', async () => {
   assert.equal(hoy.bares.find((b) => b.id === barId).reg, true);
   assert.equal(hoy.bares.length, 2); // el bar dado de alta no sale repetido
 
+  // Compartir: la página que leen WhatsApp y compañía lleva la foto de la tapa de hoy
+  const share = await (await fetch(`${url}/compartir/${barId}`)).text();
+  assert.match(share, new RegExp(`og:image" content="https://tapas\\.test/api/fotos/${body.tapa.foto}\\.jpg"`));
+  assert.match(share, /og:title" content="Callos · Taberna Dous"/);
+  assert.match(share, /url=\/#bar\/osm-n2/);
+  assert.match(await (await fetch(`${url}/compartir/no-existe`)).text(), /og\.png/);
+
+  // El logo del bar, desde su panel
+  assert.equal((await post('/api/logo', { bar: barId, clave: 'otra', ...photo() })).status, 403);
+  const logo = await (await post('/api/logo', { bar: barId, clave, foto: fakeJpeg(512, 512, 2000).toString('base64'), mini: fakeJpeg(160, 160).toString('base64') })).json();
+  assert.match(logo.logo, /^[a-f0-9]{24}$/);
+  assert.equal((await (await fetch(`${url}/api/hoy`)).json()).bares.find((b) => b.id === barId).logo, logo.logo);
+  assert.equal((await fetch(`${url}/api/fotos/${logo.logo}-m.jpg`)).status, 200);
+  assert.deepEqual(await (await post('/api/logo', { bar: barId, clave, quitar: true })).json(), { logo: '' });
+  assert.equal((await fetch(`${url}/api/fotos/${logo.logo}-m.jpg`)).status, 404);
+
   assert.equal((await post('/api/tapas/borrar', { bar: barId, clave, tapa: body.tapa.id })).status, 200);
   assert.equal((await (await fetch(`${url}/api/hoy`)).json()).tapas.length, 1);
 });

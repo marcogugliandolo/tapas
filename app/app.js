@@ -58,6 +58,7 @@ const state = {
   report: null,
   confirmDelete: null,
   installPrompt: null,
+  tour: null, // la ruta de tapas: { status, start, startName, stops: [{ bar, tapa, metros }], coords, metros, seed }
   nav: null, // la ruta a pie abierta: { bar, status, coords, metros, left, following, arrived }
 };
 let navigated = false;
@@ -472,13 +473,20 @@ function scheduleDeclutter() {
 function declutter() {
   if (!map) return;
   const shown = [];
-  const list = [...pins.entries()].sort((a, b) => (a[0] === state.barId ? -1 : b[0] === state.barId ? 1 : a[1].rank - b[1].rank));
-  const gap = map.getZoom() >= 17 ? 40 : 52;
+  const must = new Set([state.barId, ...(state.tour?.stops ?? []).map((x) => x.bar.id)].filter(Boolean));
+  const list = [...pins.entries()].sort((a, b) => (must.has(b[0]) - must.has(a[0])) || a[1].rank - b[1].rank);
+  // De lejos, solo las mejores fotos y más separadas; el resto de bares se quedan como puntos.
+  const z = map.getZoom();
+  const gap = z >= 17 ? 40 : z >= 16 ? 52 : z >= 15 ? 64 : 80;
+  const cap = z >= 16.5 ? Infinity : z >= 15.5 ? 36 : z >= 14.5 ? 22 : 12;
+  const { width, height } = map.getCanvas().getBoundingClientRect();
+  let visible = 0;
   for (const [barId, entry] of list) {
     const p = map.project(entry.lngLat);
-    const clash = barId !== state.barId && shown.some((q) => Math.abs(q.x - p.x) < gap && Math.abs(q.y - p.y) < gap + 8);
+    const onScreen = p.x > -40 && p.y > -40 && p.x < width + 40 && p.y < height + 90;
+    const clash = !must.has(barId) && ((onScreen && visible >= cap) || shown.some((q) => Math.abs(q.x - p.x) < gap && Math.abs(q.y - p.y) < gap + 8));
     entry.wrap.style.visibility = clash ? 'hidden' : '';
-    if (!clash) shown.push(p);
+    if (!clash) { shown.push(p); if (onScreen) visible += 1; }
   }
 }
 
@@ -552,6 +560,9 @@ const AVATAR_COLORS = [['#FCE9E4', '#B5321A'], ['#FFF1C9', '#7A5800'], ['#E3F0D8
 const SKIP_WORDS = new Set(['bar', 'cafe', 'café', 'cafeteria', 'cafetería', 'a', 'o', 'os', 'as', 'la', 'el', 'los', 'las', 'de', 'do', 'da', 'del', 'y', 'e']);
 /** La foto de perfil de un bar: sus iniciales en un círculo de color (siempre el mismo para el bar). */
 function avatar(bar, size = 40) {
+  if (bar?.logo && /^[a-f0-9]{24}$/.test(bar.logo)) {
+    return `<span class="avatar logo" style="--av:${size}px" aria-hidden="true"><img src="${API}/fotos/${bar.logo}${size > 120 ? '' : '-m'}.jpg" alt="" loading="lazy"></span>`;
+  }
   const words = String(bar?.nombre ?? '?').split(/\s+/).filter(Boolean);
   const main = words.filter((w) => !SKIP_WORDS.has(w.toLowerCase()));
   const letters = ((main.length ? main : words).slice(0, 2).map((w) => [...w][0]).join('') || '?').toUpperCase();
@@ -706,7 +717,7 @@ function homeHTML() {
   const promo = !MOSTRAR_ALTA || state.mine ? '' : nowCard({ act: 'go', to: 'alta', icon: STORE, title: t('¿Tienes un bar?'), sub: t('Pon tu tapa del día en el mapa. Gratis, sin apps ni cuentas.'), line: true });
   const offline = state.offline ? `<p class="notice-item">${INFO}<span>${t('Sin conexión: enseñamos lo último que se guardó en este móvil.')}</span></p>` : '';
 
-  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${storiesHTML(today)}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
+  return `${title}${demoBanner(state.tapas.some((x) => x.autor === 'ejemplo'))}${offline}${myBar}${heroHTML(today)}${today.length >= 2 ? nowCard({ act: 'go', to: 'tapeo', icon: TOUR_ICON, title: t('Hazme una ruta de tapas'), sub: t('3 o 4 bares cerca con buena tapa hoy, andando') }) : ''}${storiesHTML(today)}${tabs}${filters}${feed}${upload}${near}${promo}${foot()}`;
 }
 
 /* ---------- Ficha del bar ---------- */
@@ -876,7 +887,10 @@ function panelHTML() {
   const today = p.tapas.filter((x) => x.fecha === p.fecha);
   const install = state.installPrompt ? `<button type="button" class="cta second" data-act="install">${PHONE}${t('Añadir a la pantalla de inicio')}</button>`
     : tip(PHONE, /iP(hone|ad|od)/.test(navigator.userAgent) ? t('Guárdalo en la pantalla de inicio: botón Compartir › «Añadir a pantalla de inicio».') : t('Guárdalo en la pantalla de inicio desde el menú del navegador.'));
+  const logoBox = `<div class="logo-box">${avatar(p.bar, 64)}<div><strong>${t('Logo del bar')}</strong><small>${p.bar.logo ? t('Sale en tu perfil y en el muro.') : t('Sube tu logo o una foto de la fachada: sale en tu perfil y en el muro.')}</small>
+      <div class="logo-actions"><button type="button" class="ghost" data-act="pick-logo"${state.logoBusy ? ' disabled' : ''}>${state.logoBusy ? t('Subiendo…') : p.bar.logo ? t('Cambiar') : t('Subir logo')}</button>${p.bar.logo && !state.logoBusy ? `<button type="button" class="ghost" data-act="del-logo">${t('Quitar')}</button>` : ''}</div></div></div>`;
   return `${head(esc(p.bar.nombre), t('Panel de tu bar'))}
+    ${logoBox}
     <button type="button" class="cta brand-btn" data-act="upload" data-bar="${esc(p.bar.id)}">${CAMERA}${today.length ? t('Subir otra tapa') : t('Subir la tapa de hoy')}</button>
     <div class="stats"><div class="stat hot"><b>${p.total.votos ? fmtMedia(p.total.media) : '–'}</b><small>${p.total.votos ? `${t('de media')} · ${plural(p.total.votos, '1 nota', '{n} notas')}` : t('aún sin notas')}</small></div><div class="stat"><b>${p.total.tapas}</b><small>${t('tapas subidas')}</small></div><div class="stat"><b>${p.bar?.seguidores ?? 0}</b><small>${(p.bar?.seguidores ?? 0) === 1 ? t('seguidor') : t('seguidores')}</small></div></div>
     ${today.length ? `<section class="section"><h2>${t('Hoy')}</h2>${today.map((x) => `<div class="mine"><img src="${esc(src(x, true))}" alt=""><div><strong>${esc(x.nombre)}</strong><small>${esc(ago(x))} · ${x.votos ? `${fmtMedia(x.media)} ${t('de media')} (${x.votos})` : t('aún sin notas')}</small></div>
@@ -925,6 +939,105 @@ function routeHTML() {
     ${externalNav(bar)}`;
 }
 
+/* ---------- Ruta de tapas ---------- */
+const PRAZA_MAIOR = { lat: 43.00963, lon: -7.55663 };
+const TOUR_ICON = svg('<circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8.2 17.2c3-1 2.2-4.2 5.3-5.4 2.6-1 2.8-2.6 2.9-3.9"></path>', 22);
+let tourMarkers = [];
+
+/** Elige 3 o 4 bares con tapa hoy, buenos y cerca unos de otros, empezando por el más próximo. */
+function pickTour(start, seed = 0) {
+  const jitter = (id) => { let h = seed * 7919; for (const c of id) h = (h * 31 + c.codePointAt(0)) >>> 0; return (h % 1000) / 1000; };
+  const quality = (bar, tapa) => (tapa.votos ? tapa.media : 3.6) + (isFollowing(bar.id) ? 0.4 : 0) + (seed ? jitter(bar.id) * 0.8 : 0);
+  const pool = [...state.latest.values()].filter(isToday).map((tapa) => ({ tapa, bar: state.barById.get(tapa.bar) })).filter((x) => x.bar && distance(start, x.bar) < 1500);
+  const stops = [];
+  let here = start;
+  while (stops.length < 4) {
+    let best = null;
+    for (const x of pool) {
+      if (stops.some((s) => s.bar.id === x.bar.id)) continue;
+      const d = distance(here, x.bar);
+      if (d > (stops.length ? 700 : 1200) || (stops.length && d < 40)) continue;
+      const score = quality(x.bar, x.tapa) - d / 300;
+      if (!best || score > best.score) best = { ...x, score };
+    }
+    if (!best) break;
+    stops.push(best);
+    here = best.bar;
+  }
+  return stops.length >= 2 ? stops : [];
+}
+
+async function startTour(seed = 0) {
+  const tour = { status: 'locating', seed };
+  state.tour = tour;
+  render();
+  let start = null;
+  let startName = '';
+  try { start = await currentPosition(); } catch { /* sin GPS: desde la Praza Maior */ }
+  if (state.tour !== tour) return;
+  if (start) state.me = start;
+  if (!start || distance(start, PRAZA_MAIOR) > 3000) { start = PRAZA_MAIOR; startName = t('Praza Maior'); }
+  const stops = pickTour(start, seed);
+  if (!stops.length) { tour.status = 'none'; render(); return; }
+  let coords = [];
+  let metros = 0;
+  let tools = null;
+  try { tools = await loadNavTools(); } catch { /* sin callejero: líneas rectas */ }
+  if (state.tour !== tour) return;
+  let from = start;
+  for (const stop of stops) {
+    const leg = tools?.mod.walkRoute(tools.g, [from.lon, from.lat], [stop.bar.lon, stop.bar.lat]);
+    const legCoords = leg?.coords ?? [[from.lon, from.lat], [stop.bar.lon, stop.bar.lat]];
+    stop.metros = leg?.metros ?? Math.round(distance(from, stop.bar) * 1.3);
+    metros += stop.metros;
+    coords = coords.concat(coords.length ? legCoords.slice(1) : legCoords);
+    from = stop.bar;
+  }
+  Object.assign(tour, { status: 'ok', start, startName, stops, coords, metros });
+  drawRoute(coords);
+  drawTourMarkers(stops);
+  scheduleDeclutter();
+  render();
+  requestAnimationFrame(() => fitRoute(coords));
+}
+
+function drawTourMarkers(stops) {
+  for (const m of tourMarkers) m.remove();
+  tourMarkers = [];
+  if (!mapReady) return;
+  stops.forEach((stop, i) => {
+    const el = document.createElement('div');
+    el.className = 'tour-num';
+    el.textContent = String(i + 1);
+    tourMarkers.push(new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([stop.bar.lon, stop.bar.lat]).addTo(map));
+  });
+}
+
+function closeTour() {
+  state.tour = null;
+  for (const m of tourMarkers) m.remove();
+  tourMarkers = [];
+  if (!state.nav) drawRoute(null);
+}
+
+function tourHTML() {
+  const tour = state.tour;
+  const head = (sub = '') => `<div class="head">${back()}<div><h1>${t('Ruta de tapas')}</h1><small>${sub}</small></div></div>`;
+  if (!tour || tour.status === 'locating') return `${head(t('Buscando bares cerca…'))}<p class="empty">${t('Buscando dónde estás…')}</p>`;
+  if (tour.status === 'none') {
+    return `${head()}<div class="ride-hero"><strong class="big-line">${t('Hoy no hay tapas suficientes cerca')}</strong><small>${t('Cuando más bares suban la suya, aquí te haremos la ruta.')}</small></div><button type="button" class="cta" data-act="back">${t('Volver')}</button>`;
+  }
+  const mins = minutesFor(tour.metros);
+  const sub = `${plural(tour.stops.length, '1 bar', '{n} bares')} · ${metresText(tour.metros)} · ${t('{n} min andando', { n: mins })}`;
+  const stops = tour.stops.map((s, i) => `<button type="button" class="tour-stop" data-act="open-tapa" data-bar="${esc(s.bar.id)}" data-tapa="${esc(s.tapa.id)}">
+      <span class="tour-n">${i + 1}</span><img src="${esc(src(s.tapa, true))}" alt="" loading="lazy">
+      <span class="to"><strong>${esc(s.tapa.nombre)}</strong><small>${esc(s.bar.nombre)}${s.tapa.votos ? ` · ${STAR_FILL}${fmtMedia(s.tapa.media)}` : ''}</small><small class="leg">${WALK}${i === 0 ? (tour.startName ? t('{n} min desde la {sitio}', { n: minutesFor(s.metros), sitio: tour.startName }) : t('{n} min desde donde estás', { n: minutesFor(s.metros) })) : t('{n} min desde la anterior', { n: minutesFor(s.metros) })}</small></span></button>`).join('');
+  return `${head(sub)}<div class="tour-list">${stops}</div>
+    <div class="buttons"><button type="button" class="cta brand-btn" data-act="go" data-to="ruta/${esc(tour.stops[0].bar.id)}">${NAV}${t('Ir a la primera')}</button>
+    <button type="button" class="cta second" data-act="tour-again">${TOUR_ICON}${t('Otra ruta')}</button></div>
+    <p class="note">${t('Elegimos bares con tapa hoy, bien valorados y cerca unos de otros. Cuando acabes en uno, abre el siguiente y dale a «Cómo llegar».')}</p>`;
+}
+
 /* ---------- ¿Algo no cuadra? ---------- */
 const REPORT_KINDS = {
   foto: 'La foto no es de una tapa o no es de este bar',
@@ -958,6 +1071,7 @@ function render() {
           : view === 'panel' ? panelHTML()
             : view === 'report' ? reportHTML()
               : view === 'route' ? routeHTML()
+                : view === 'tour' ? tourHTML()
                 : homeHTML();
   const body = $('#sheet-body');
   // Al repintar sin cambiar de pantalla se conserva el desplazamiento y el campo con el foco.
@@ -1008,6 +1122,12 @@ function route() {
   const [name, a, b] = raw.split('/');
   if (name !== 'alta' && state.alta?.aiming) state.alta.aiming = false;
   if (name !== 'ruta' && state.nav) closeNav();
+  if (name !== 'tapeo' && state.tour) closeTour();
+  if (name === 'tapeo') {
+    setView('tour', 'mid');
+    if (!state.tour) startTour();
+    return;
+  }
   if (name === 'ruta' && a) {
     if (state.nav?.bar !== a) { closeNav(); state.nav = { bar: a, status: 'locating' }; }
     state.barId = a;
@@ -1256,6 +1376,40 @@ async function processImage(file) {
   return { big: await toBase64(big), mini: await toBase64(mini), url: URL.createObjectURL(big) };
 }
 
+/** El logo: un cuadrado de 512 px (y otro de 160 para las miniaturas), recortado al centro. */
+async function processLogo(file) {
+  let source;
+  try { source = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { source = await loadImage(file); }
+  const w = source.width;
+  const h = source.height;
+  if (Math.min(w, h) < 200) throw new Error(t('La foto es demasiado pequeña.'));
+  const crop = Math.min(w, h);
+  const sx = (w - crop) / 2;
+  const sy = (h - crop) / 2;
+  const big = await toBlob(draw(source, 512, 512, sx, sy, crop, crop), 0.86);
+  const mini = await toBlob(draw(source, 160, 160, sx, sy, crop, crop), 0.82);
+  source.close?.();
+  return { foto: await toBase64(big), mini: await toBase64(mini) };
+}
+
+async function sendLogo(file) {
+  if (!state.mine || !state.panel?.bar || state.logoBusy) return;
+  state.logoBusy = true;
+  render();
+  try {
+    const body = { bar: state.mine.bar, clave: state.mine.clave };
+    if (file) Object.assign(body, await processLogo(file)); else body.quitar = true;
+    if (DEMO) throw new Error(t('En el modo de ejemplo no se sube nada.'));
+    const res = await postJSON('/logo', body);
+    for (const b of new Set([state.panel.bar, state.barById.get(state.mine.bar)].filter(Boolean))) { if (res.logo) b.logo = res.logo; else delete b.logo; }
+    toast(res.logo ? t('Logo guardado.') : t('Logo quitado.'));
+  } catch (err) {
+    toast(err.message && err.message !== 'imagen' ? err.message : t('No se pudo abrir esa foto. Prueba con otra.'));
+  }
+  state.logoBusy = false;
+  render();
+}
+
 async function onFile(file) {
   if (!file || !state.upload) return;
   state.upload.processing = true;
@@ -1373,7 +1527,8 @@ function shareBar(id) {
   const bar = state.barById.get(id) ?? state.panel?.bar;
   if (!bar) return;
   const tapa = state.latest.get(id);
-  const url = `${location.origin}/#bar/${encodeURIComponent(id)}`;
+  // /compartir/<bar> sale en WhatsApp con la foto de la tapa de hoy; al abrirlo, lleva a la ficha.
+  const url = DEMO || id.startsWith('ejemplo-') ? `${location.origin}/#bar/${encodeURIComponent(id)}` : `${location.origin}/compartir/${encodeURIComponent(id)}`;
   const text = tapa && isToday(tapa)
     ? t('🔥 Hoy en {bar} ponen {tapa}. Míralo en Que Tapa!', { bar: bar.nombre, tapa: tapa.nombre })
     : t('🍷 Mira la tapa de hoy en {bar}, en Que Tapa!', { bar: bar.nombre });
@@ -1402,6 +1557,7 @@ function bindSheet() {
       case 'tab': state.tab = d.tab; state.feedN = FEED_PAGE; render(); break;
       case 'more': state.feedN += FEED_PAGE; render(); break;
       case 'follow': follow(d.bar); break;
+      case 'tour-again': startTour((state.tour?.seed ?? 0) + 1); break;
       case 'rate': rate(d.tapa, Number(d.nota)); break;
       case 'share': shareBar(state.barId); break;
       case 'share-bar': shareBar(d.bar); break;
@@ -1410,6 +1566,8 @@ function bindSheet() {
       case 'up-bar': state.upload.bar = d.bar; history.replaceState(null, '', `#subir/${d.bar}`); render(); body.scrollTop = 0; break;
       case 'up-change': state.upload.bar = null; history.replaceState(null, '', '#subir'); render(); break;
       case 'pick-camera': $('#file-camera').click(); break;
+      case 'pick-logo': $('#file-logo').click(); break;
+      case 'del-logo': sendLogo(null); break;
       case 'pick-gallery': $('#file-gallery').click(); break;
       case 'up-idea': state.upload.nombre = d.idea; render(); break;
       case 'up-tipo': {
@@ -1656,6 +1814,7 @@ function start() {
   for (const id of ['#file-camera', '#file-gallery']) {
     $(id).addEventListener('change', (e) => { const f = e.target.files?.[0]; e.target.value = ''; onFile(f); });
   }
+  $('#file-logo').addEventListener('change', (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) sendLogo(f); });
   const q = $('#q');
   q.addEventListener('focus', () => { if (state.view !== 'search') { state.query = q.value; setView('search', 'tall'); } });
   q.addEventListener('input', () => { state.query = q.value; render(); });
