@@ -1508,7 +1508,9 @@ function shareBar(id) {
   if (!bar) return;
   const tapa = state.latest.get(id);
   // /compartir/<bar> sale en WhatsApp con la foto de la tapa de hoy; al abrirlo, lleva a la ficha.
-  const url = DEMO || id.startsWith('ejemplo-') ? `${location.origin}/#bar/${encodeURIComponent(id)}` : `${location.origin}/compartir/${encodeURIComponent(id)}`;
+  // En el modo de ejemplo, el enlace sigue en el ejemplo: sirve de demo para enseñársela a un bar.
+  const url = DEMO ? `${location.origin}/?ejemplo#bar/${encodeURIComponent(id)}`
+    : id.startsWith('ejemplo-') ? `${location.origin}/#bar/${encodeURIComponent(id)}` : `${location.origin}/compartir/${encodeURIComponent(id)}`;
   const text = tapa && isToday(tapa)
     ? t('🔥 Hoy en {bar} ponen {tapa}. Míralo en Que Tapa!', { bar: bar.nombre, tapa: tapa.nombre })
     : t('🍷 Mira la tapa de hoy en {bar}, en Que Tapa!', { bar: bar.nombre });
